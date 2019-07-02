@@ -22,12 +22,13 @@ private:
 	mygl3::RenderBuffer m_rbo;
 	GLint m_unif_transform;
 	glm::mat4 m_transform;
+	glm::vec3 m_light_dir;
 public:
 	void Initialize();
-	void Update(const Scene &scene, const glm::mat4 &transform);
 	void Update(const Scene &scene, const glm::vec3 &sun_pos);
 	const mygl3::Texture2D &GetTexture() const { return m_texture; }
 	const glm::mat4 &GetShadowTransform() const { return m_transform; }
+	const glm::vec3 &GetLightDir() const { return m_light_dir; }
 };
 
 class ShadowMapBlurer

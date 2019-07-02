@@ -15,6 +15,7 @@ layout (binding = 5) uniform sampler2DArray uDepth;
 layout (location = 0) out vec3 oRadiance;
 
 uniform mat4 uShadowTransform;
+uniform vec3 uLightDir;
 
 in vec2 gTexcoords;
 
@@ -93,15 +94,27 @@ float SampleShadow(in const vec3 position)
 
 	vec4 moments = ConvertMoments(texture2D(uShadowMap, coord.xy));
 
-	float shadow = ComputeMSMHamburger(moments, coord.z, 0.0f, 0.00001);
+	float shadow = ComputeMSMHamburger(moments, coord.z, 0.0f, 0.00002);
 	shadow = smoothstep(0.65f, 1.0f, shadow);
 	return shadow;
+}
+
+//oct16 normal decoding :
+// Returns ±1
+vec2 SignNotZero(vec2 v) { return vec2((v.x >= 0.0) ? 1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0); }
+vec3 oct_to_float32x3(vec2 e)
+{
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * SignNotZero(v.xy);
+	return normalize(v);
 }
 
 void main()
 {
 	vec3 position = ReconstructPosition( gTexcoords );
 	vec3 albedo = texture(uAlbedo, vec3(gTexcoords, gl_Layer)).rgb;
+	vec3 normal = oct_to_float32x3( texture(uNormal, vec3(gTexcoords, gl_Layer)).rg );
 
-	oRadiance = (vec3(5, 4, 4)*0.5*SampleShadow(position) + vec3(0.2, 0.16, 0.16)) * albedo;
+	oRadiance = max( dot(normal, -uLightDir), 0.0f ) * vec3(5, 4, 4) * SampleShadow(position) * albedo;
+	oRadiance += albedo * vec3(0.2, 0.16, 0.16);
 }

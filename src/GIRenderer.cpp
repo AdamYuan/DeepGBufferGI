@@ -18,7 +18,8 @@ void GIRenderer::Initialize()
 	m_direct_light_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_direct_light_shader.LoadFromFile("shaders/directlight.frag", GL_FRAGMENT_SHADER);
 	m_direct_light_shader.LoadFromFile("shaders/directlight.geom", GL_GEOMETRY_SHADER);
-	m_diret_light_unif_shadow_transform = m_direct_light_shader.GetUniform("uShadowTransform");
+	m_direct_light_unif_shadow_transform = m_direct_light_shader.GetUniform("uShadowTransform");
+	m_direct_light_unif_light_dir = m_direct_light_shader.GetUniform("uLightDir");
 }
 
 void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer, const ShadowMap &shadowmap)
@@ -35,7 +36,8 @@ void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	m_direct_light_shader.Use();
-	m_direct_light_shader.SetMat4(m_diret_light_unif_shadow_transform, glm::value_ptr(shadowmap.GetShadowTransform()));
+	m_direct_light_shader.SetMat4(m_direct_light_unif_shadow_transform, glm::value_ptr(shadowmap.GetShadowTransform()));
+	m_direct_light_shader.SetVec3(m_direct_light_unif_light_dir, glm::value_ptr(shadowmap.GetLightDir()));
 	quad.Render();
 
 	mygl3::FrameBuffer::Unbind();

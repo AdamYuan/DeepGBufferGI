@@ -17,7 +17,7 @@ private:
 	mygl3::Texture2DArray m_radiance; //GL_R11F_G11F_B10F
 	mygl3::FrameBuffer m_fbo;
 	mygl3::Shader m_direct_light_shader, m_radiosity_shader;
-	GLint m_diret_light_unif_shadow_transform;
+	GLint m_direct_light_unif_shadow_transform, m_direct_light_unif_light_dir;
 public:
 	void Initialize();
 	void DirectLight(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer, const ShadowMap &shadowmap);

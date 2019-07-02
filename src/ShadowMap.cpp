@@ -29,9 +29,19 @@ void ShadowMap::Initialize()
 	m_fbo.AttachRenderbuffer(m_rbo, GL_DEPTH_ATTACHMENT);
 }
 
-void ShadowMap::Update(const Scene &scene, const glm::mat4 &transform)
+void ShadowMap::Update(const Scene &scene, const glm::vec3 &sun_pos)
 {
-	m_transform = transform;
+	m_light_dir = glm::normalize(-sun_pos);
+
+	//calculate transformation
+	glm::vec3 up{0.0f, 1.0f, 0.0f};
+	if(m_light_dir.x == 0.0f && m_light_dir.z == 0.0f)
+		up = glm::vec3(1.0f, 0.0f, 0.0f);
+	glm::mat4 light_view = glm::lookAt(glm::vec3(0.0f), m_light_dir, up);
+	glm::mat4 light_projection = glm::ortho(-1.5f, 1.5f, -1.5f, 1.5f, -1.5f, 1.5f);
+	m_transform = light_projection * light_view;
+
+	//render
 	m_fbo.Bind();
 	glViewport(0, 0, kShadowMapSize, kShadowMapSize);
 
@@ -41,23 +51,10 @@ void ShadowMap::Update(const Scene &scene, const glm::mat4 &transform)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_shader.Use();
-	m_shader.SetMat4(m_unif_transform, glm::value_ptr(transform));
+	m_shader.SetMat4(m_unif_transform, glm::value_ptr(m_transform));
 	scene.Draw();
 
 	mygl3::FrameBuffer::Unbind();
-}
-
-void ShadowMap::Update(const Scene &scene, const glm::vec3 &sun_pos)
-{
-	glm::vec3 light_dir = glm::normalize(-sun_pos);
-	glm::vec3 up{0.0f, 1.0f, 0.0f};
-	if(light_dir.x == 0.0f && light_dir.z == 0.0f)
-		up = glm::vec3(1.0f, 0.0f, 0.0f);
-	glm::mat4 light_view = glm::lookAt(glm::vec3(0.0f), light_dir, up);
-	glm::mat4 light_projection = glm::ortho(-1.5f, 1.5f, -1.5f, 1.5f, -1.5f, 1.5f);
-
-	glm::mat4 transform = light_projection * light_view;
-	Update(scene, transform);
 }
 
 void ShadowMapBlurer::Initialize()
