@@ -20,6 +20,8 @@ Application::Application()
 
 	gl3wInit();
 
+	m_quad.Initialize();
+
 	m_camera.Initialize();
 
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/sibenik/sibenik.obj");
@@ -30,10 +32,8 @@ Application::Application()
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/fireplace_room/fireplace_room.obj");
 
 	m_gbuffer.Initialize();
-
-	m_quad.Initialize();
 	m_tester.Initialize();
-	m_tester.LoadFromFile("shaders/tester.vert", GL_VERTEX_SHADER);
+	m_tester.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_tester.LoadFromFile("shaders/tester.frag", GL_FRAGMENT_SHADER);
 
 	m_shadowmap.Initialize();
@@ -44,6 +44,22 @@ Application::Application()
 	shadowmap_blurer.Blur(m_quad, m_shadowmap);
 
 	m_renderer.Initialize();
+
+	/*m_test_texture.Initialize();
+	m_test_texture.Storage(kWidth, kHeight, GL_RGBA8);
+	m_test_fbo.Initialize();
+	m_test_fbo.AttachTexture(m_test_texture, GL_COLOR_ATTACHMENT0);
+
+	m_test_fbo.Bind();
+	glClear(GL_COLOR_BUFFER_BIT);
+	mygl3::FrameBuffer::Unbind();
+
+	m_test_texture.Bind(2);
+	glBindImageTexture(3, m_test_texture.Get(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+
+	m_tester.Use();
+	m_quad.Render();
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);*/
 }
 
 Application::~Application()
@@ -59,6 +75,7 @@ void Application::Run()
 	{
 		glViewport(0, 0, kWidth, kHeight);
 		m_fps.Update();
+
 		m_camera.Control(m_window, m_fps);
 		m_camera.Update();
 
@@ -70,6 +87,7 @@ void Application::Run()
 		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
 
 		m_renderer.GetRadiance().Bind(2);
+		//m_shadowmap.GetTexture().Bind(2);
 		m_tester.Use();
 		m_quad.Render();
 

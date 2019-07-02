@@ -10,11 +10,8 @@
 void ShadowMap::Initialize()
 {
 	m_texture.Initialize();
-	m_texture.Storage(kShadowMapSize, kShadowMapSize, GL_RGBA32F);
-	float border_color[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTextureParameterfv(m_texture.Get(), GL_TEXTURE_BORDER_COLOR, border_color);
+	m_texture.Storage(kShadowMapSize, kShadowMapSize, GL_RGBA16);
 	m_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
-	m_texture.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
 	m_shader.Initialize();
 	m_shader.LoadFromFile("shaders/shadowmap.vert", GL_VERTEX_SHADER);
@@ -60,9 +57,8 @@ void ShadowMap::Update(const Scene &scene, const glm::vec3 &sun_pos)
 void ShadowMapBlurer::Initialize()
 {
 	m_tmp_texture.Initialize();
-	m_tmp_texture.Storage(kShadowMapSize, kShadowMapSize, GL_RGBA32F);
+	m_tmp_texture.Storage(kShadowMapSize, kShadowMapSize, GL_RGBA16);
 	m_tmp_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
-	m_tmp_texture.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
 	m_shader.Initialize();
 	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);

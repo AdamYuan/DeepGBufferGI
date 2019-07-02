@@ -8,6 +8,6 @@
 constexpr int kWidth = 1280, kHeight = 720;
 constexpr float kCamNear = 1.0f / 512.0f, kCamFar = 4.0f;
 constexpr float kCamAspectRatio = kWidth / (float)kHeight;
-constexpr int kShadowMapSize = 1024;
+constexpr int kShadowMapSize = 2048;
 
 #endif //SPARSEVOXELOCTREE_CONFIG_HPP

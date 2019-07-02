@@ -24,8 +24,12 @@ private:
 	GIRenderer m_renderer;
 	mygl3::Framerate m_fps;
 
-	mygl3::Shader m_tester;
 	ScreenQuad m_quad;
+	mygl3::Shader m_tester;
+
+	//test area
+	//mygl3::FrameBuffer m_test_fbo;
+	//mygl3::Texture2D m_test_texture;
 public:
 	Application();
 	~Application();

@@ -94,7 +94,7 @@ float SampleShadow(in const vec3 position)
 
 	vec4 moments = ConvertMoments(texture2D(uShadowMap, coord.xy));
 
-	float shadow = ComputeMSMHamburger(moments, coord.z, 0.0f, 0.00002);
+	float shadow = ComputeMSMHamburger(moments, coord.z, 0.0f, 3e-5f);
 	shadow = smoothstep(0.65f, 1.0f, shadow);
 	return shadow;
 }
