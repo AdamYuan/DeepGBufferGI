@@ -13,11 +13,9 @@ void GIRenderer::Initialize()
 	m_radiance.Storage(kWidth, kHeight, 2, GL_R11F_G11F_B10F);
 	m_fbo.Initialize();
 	m_fbo.AttachTexture(m_radiance, GL_COLOR_ATTACHMENT0);
-	GLenum attachment[] = { GL_COLOR_ATTACHMENT0 };
-	glNamedFramebufferDrawBuffers(m_fbo.Get(), 1, attachment);
 
 	m_direct_light_shader.Initialize();
-	m_direct_light_shader.LoadFromFile("shaders/girenderer.vert", GL_VERTEX_SHADER);
+	m_direct_light_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_direct_light_shader.LoadFromFile("shaders/directlight.frag", GL_FRAGMENT_SHADER);
 	m_direct_light_shader.LoadFromFile("shaders/directlight.geom", GL_GEOMETRY_SHADER);
 	m_diret_light_unif_shadow_transform = m_direct_light_shader.GetUniform("uShadowTransform");
@@ -28,7 +26,7 @@ void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const
 	m_fbo.Bind();
 
 	camera.GetBuffer().BindBase(GL_UNIFORM_BUFFER, kCameraUBO);
-	shadowmap.GetTexture().Bind(kShadowMapSample2D);
+	shadowmap.GetTexture().Bind(kShadowMapSampler2D);
 	gbuffer.GetAlbedo().Bind(kGBufferAlbedoSampler2D);
 	gbuffer.GetNormal().Bind(kGBufferNormalSampler2D);
 	gbuffer.GetDepth().Bind(kGBufferDepthSampler2D);

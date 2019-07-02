@@ -39,6 +39,10 @@ Application::Application()
 	m_shadowmap.Initialize();
 	m_shadowmap.Update(m_scene, {-24.6f, 50.0f, 12.0f});
 
+	ShadowMapBlurer shadowmap_blurer;
+	shadowmap_blurer.Initialize();
+	shadowmap_blurer.Blur(m_quad, m_shadowmap);
+
 	m_renderer.Initialize();
 }
 

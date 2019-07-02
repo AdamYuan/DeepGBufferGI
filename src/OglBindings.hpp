@@ -9,8 +9,8 @@
 
 constexpr GLuint kTextureUBO = 0;
 constexpr GLuint kCameraUBO = 1;
-constexpr GLuint kLastDepthSample2D = 1;
-constexpr GLuint kShadowMapSample2D = 2;
+constexpr GLuint kLastDepthSampler2D = 1;
+constexpr GLuint kShadowMapSampler2D = 2;
 constexpr GLuint kGBufferAlbedoSampler2D = 3;
 constexpr GLuint kGBufferNormalSampler2D = 4;
 constexpr GLuint kGBufferDepthSampler2D = 5;

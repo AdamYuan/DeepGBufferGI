@@ -7,7 +7,7 @@ layout(std140, binding = 1) uniform uuCamera
 	float uX, uY, uZ, uInvCosHalfFov;
 };
 
-layout (binding = 2) uniform sampler2DShadow uShadowMap;
+layout (binding = 2) uniform sampler2D uShadowMap;
 layout (binding = 3) uniform sampler2DArray uAlbedo;
 layout (binding = 4) uniform sampler2DArray uNormal;
 layout (binding = 5) uniform sampler2DArray uDepth;
@@ -18,55 +18,81 @@ uniform mat4 uShadowTransform;
 
 in vec2 gTexcoords;
 
-const float kNear = 1.0f / 512.0f, kFar = 4.0f;
-float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + kNear - depth * (kFar - kNear)); }
-
-//oct16 normal encoding :
-// Returns ±1
-vec2 SignNotZero(vec2 v) { return vec2((v.x >= 0.0) ? 1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0); }
-// Assume normalized input. Output is on [-1, 1] for each component.
-vec2 float32x3_to_oct(in vec3 v) 
-{
-	// Project the sphere onto the octahedron, and then onto the xy plane
-	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
-	// Reflect the folds of the lower hemisphere over the diagonals
-	return (v.z <= 0.0) ? ((1.0 - abs(p.yx)) * SignNotZero(p)) : p;
-}
-
 vec3 ReconstructPosition(in const vec2 texcoords)
 {
 	vec4 clip = vec4(texcoords * 2.0f - 1.0f, texture(uDepth, vec3(texcoords, gl_Layer)).r * 2.0f - 1.0f, 1.0f);
 	vec4 rec = inverse(uProjection * uView) * clip;
 	return rec.xyz / rec.w;
 }
+
+vec4 ConvertMoments(vec4 optimized_moments) {
+	optimized_moments[0] -= 0.0359558848;
+	const mat4 mat = mat4(0.2227744146, 0.1549679261, 0.1451988946, 0.163127443,
+						  0.0771972861, 0.1394629426, 0.2120202157, 0.2591432266,
+						  0.7926986636,0.7963415838, 0.7258694464, 0.6539092497,
+						  0.0319417555,-0.1722823173,-0.2758014811,-0.3376131734);
+	return mat * optimized_moments;
+}
+
+float ComputeMSMHamburger(in vec4 moments, in float depth, in float depth_bias, in float moment_bias)
+{
+	// Bias input data to avoid artifacts
+	vec4 b = mix(moments, vec4(0.5f, 0.5f, 0.5f, 0.5f), moment_bias);
+	vec3 z;
+	z[0] = depth - depth_bias;
+
+	// Compute a Cholesky factorization of the Hankel matrix B storing only non-
+	// trivial entries or related products
+	float L32D22 = fma(-b[0], b[1], b[2]);
+	float D22 = fma(-b[0], b[0], b[1]);
+	float squaredDepthVariance = fma(-b[1], b[1], b[3]);
+	float D33D22 = dot(vec2(squaredDepthVariance, -L32D22), vec2(D22, L32D22));
+	float InvD22 = 1.0f / D22;
+	float L32 = L32D22 * InvD22;
+
+	// Obtain a scaled inverse image of bz = (1,z[0],z[0]*z[0])^T
+	vec3 c = vec3(1.0f, z[0], z[0] * z[0]);
+
+	// Forward substitution to solve L*c1=bz
+	c[1] -= b.x;
+	c[2] -= b.y + L32 * c[1];
+
+	// Scaling to solve D*c2=c1
+	c[1] *= InvD22;
+	c[2] *= D22 / D33D22;
+
+	// Backward substitution to solve L^T*c3=c2
+	c[1] -= L32 * c[2];
+	c[0] -= dot(c.yz, b.xy);
+
+	// Solve the quadratic equation c[0]+c[1]*z+c[2]*z^2 to obtain solutions
+	// z[1] and z[2]
+	float p = c[1] / c[2];
+	float q = c[0] / c[2];
+	float D = (p * p * 0.25f) - q;
+	float r = sqrt(D);
+	z[1] =- p * 0.5f - r;
+	z[2] =- p * 0.5f + r;
+
+	// Compute the shadow intensity by summing the appropriate weights
+	vec4 switch_val = (z[2] < z[0]) ? vec4(z[1], z[0], 1.0f, 1.0f) :
+		((z[1] < z[0]) ? vec4(z[0], z[1], 0.0f, 1.0f) :
+		 vec4(0.0f,0.0f,0.0f,0.0f));
+	float quotient = (switch_val[0] * z[2] - b[0] * (switch_val[0] + z[2]) + b[1])/((z[2] - switch_val[1]) * (z[0] - z[1]));
+	float shadow_intensity = switch_val[2] + switch_val[3] * quotient;
+	return 1.0f - clamp(shadow_intensity, 0.0, 1.0);
+}
 float SampleShadow(in const vec3 position)
 {
 	vec4 transformed = uShadowTransform * vec4(position, 1.0f);
 	vec3 coord = transformed.xyz / transformed.w;
 	coord = coord * 0.5f + 0.5f;
-	coord.z -= 1.0f / 256.0f;
 
-	return texture(uShadowMap, coord).r;
-}
-float SampleShadowPCF(in const vec3 position)
-{
-	float shadow = 0.0;
-	vec2 texel_size = 1.0 / textureSize(uShadowMap, 0);
+	vec4 moments = ConvertMoments(texture2D(uShadowMap, coord.xy));
 
-	vec4 transformed = uShadowTransform * vec4(position, 1.0f);
-	vec3 coord = transformed.xyz / transformed.w;
-	coord = coord * 0.5f + 0.5f;
-	coord.z -= 1.0f / 1024.0f; //bias
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2( texel_size.x,  texel_size.y), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2( texel_size.x,             0), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2( texel_size.x, -texel_size.y), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2(            0,  texel_size.y), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2(            0,             0), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2(            0, -texel_size.y), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2(-texel_size.x,  texel_size.y), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2(-texel_size.x,             0), coord.z)).r;
-	shadow += texture(uShadowMap, vec3(coord.xy + vec2(-texel_size.x, -texel_size.y), coord.z)).r;
-	return shadow / 9.0f;
+	float shadow = ComputeMSMHamburger(moments, coord.z, 0.0f, 0.00001);
+	shadow = smoothstep(0.65f, 1.0f, shadow);
+	return shadow;
 }
 
 void main()
@@ -74,5 +100,5 @@ void main()
 	vec3 position = ReconstructPosition( gTexcoords );
 	vec3 albedo = texture(uAlbedo, vec3(gTexcoords, gl_Layer)).rgb;
 
-	oRadiance = (vec3(5, 4, 4)*SampleShadowPCF(position) + vec3(0.2, 0.16, 0.16)) * albedo;
+	oRadiance = (vec3(5, 4, 4)*0.5*SampleShadow(position) + vec3(0.2, 0.16, 0.16)) * albedo;
 }

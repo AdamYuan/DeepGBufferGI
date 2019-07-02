@@ -13,7 +13,7 @@ void main()
 {
 	vec3 coord = vec3(vPosition*0.5f + 0.5f, gl_FragCoord.x < 640 ? 0 : 1);
 	oColor = vec4(
-		texture(uTexture, coord).rgb
+		pow(texture(uTexture, coord).rgb, vec3(1.0f / 2.2f))
 		, 1);
 
 	/*vec3 coord = vec3(vPosition*0.5f + 0.5f, gl_FragCoord.x < 640 ? 0 : 1);

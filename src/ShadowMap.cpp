@@ -5,24 +5,28 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "ShadowMap.hpp"
 #include "Config.hpp"
+#include "OglBindings.hpp"
 
 void ShadowMap::Initialize()
 {
 	m_texture.Initialize();
-	m_texture.Storage(kShadowMapSize, kShadowMapSize, GL_DEPTH_COMPONENT32);
+	m_texture.Storage(kShadowMapSize, kShadowMapSize, GL_RGBA32F);
 	float border_color[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glTextureParameterfv(m_texture.Get(), GL_TEXTURE_BORDER_COLOR, border_color);
 	m_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
 	m_texture.SetWrapFilter(GL_CLAMP_TO_BORDER);
-	glTextureParameteri(m_texture.Get(), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 
 	m_shader.Initialize();
 	m_shader.LoadFromFile("shaders/shadowmap.vert", GL_VERTEX_SHADER);
 	m_shader.LoadFromFile("shaders/shadowmap.frag", GL_FRAGMENT_SHADER);
 	m_unif_transform = m_shader.GetUniform("uTransform");
 
+	m_rbo.Initialize();
+	m_rbo.Load(GL_DEPTH_COMPONENT, kShadowMapSize, kShadowMapSize);
+
 	m_fbo.Initialize();
-	m_fbo.AttachTexture(m_texture, GL_DEPTH_ATTACHMENT);
+	m_fbo.AttachTexture(m_texture, GL_COLOR_ATTACHMENT0);
+	m_fbo.AttachRenderbuffer(m_rbo, GL_DEPTH_ATTACHMENT);
 }
 
 void ShadowMap::Update(const Scene &scene, const glm::mat4 &transform)
@@ -54,4 +58,44 @@ void ShadowMap::Update(const Scene &scene, const glm::vec3 &sun_pos)
 
 	glm::mat4 transform = light_projection * light_view;
 	Update(scene, transform);
+}
+
+void ShadowMapBlurer::Initialize()
+{
+	m_tmp_texture.Initialize();
+	m_tmp_texture.Storage(kShadowMapSize, kShadowMapSize, GL_RGBA32F);
+	m_tmp_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
+	m_tmp_texture.SetWrapFilter(GL_CLAMP_TO_BORDER);
+
+	m_shader.Initialize();
+	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_shader.LoadFromFile("shaders/shadowmap_blur.frag", GL_FRAGMENT_SHADER);
+	m_unif_direction = m_shader.GetUniform("uDirection");
+
+	m_blur_fbo[0].Initialize();
+	m_blur_fbo[0].AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
+	m_blur_fbo[1].Initialize();
+}
+
+void ShadowMapBlurer::Blur(const ScreenQuad &quad, const ShadowMap &shadowmap)
+{
+	constexpr GLfloat dir0[] = {1.0f, 0.0f}, dir1[] = {0.0f, 1.0f};
+	m_shader.Use();
+
+	m_blur_fbo[0].Bind();
+	glViewport(0, 0, kShadowMapSize, kShadowMapSize);
+	glClear(GL_COLOR_BUFFER_BIT);
+	shadowmap.GetTexture().Bind(kShadowMapSampler2D);
+	m_shader.SetVec2(m_unif_direction, dir0);
+	quad.Render();
+	mygl3::FrameBuffer::Unbind();
+
+	m_blur_fbo[1].AttachTexture(shadowmap.GetTexture(), GL_COLOR_ATTACHMENT0);
+	m_blur_fbo[1].Bind();
+	glViewport(0, 0, kShadowMapSize, kShadowMapSize);
+	glClear(GL_COLOR_BUFFER_BIT);
+	m_tmp_texture.Bind(kShadowMapSampler2D);
+	m_shader.SetVec2(m_unif_direction, dir1);
+	quad.Render();
+	mygl3::FrameBuffer::Unbind();
 }

@@ -43,7 +43,7 @@ void DeepGBuffer::Update(const Scene &scene, const Camera &camera)
 	glCopyImageSubData(m_depth.Get(), GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
 			m_last_depth.Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
 			kWidth, kHeight, 1);
-	m_last_depth.Bind(kLastDepthSample2D);
+	m_last_depth.Bind(kLastDepthSampler2D);
 
 	m_fbo.Bind();
 
