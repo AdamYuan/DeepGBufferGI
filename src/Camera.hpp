@@ -5,29 +5,42 @@
 #ifndef ADYPT_CAMERA_HPP
 #define ADYPT_CAMERA_HPP
 
-#include <mygl3/utils/framerate.hpp>
 #include <glm/glm.hpp>
+#include <mygl3/buffer.hpp>
+#include <mygl3/utils/framerate.hpp>
+
+#define PIF 3.14159265358979323846f
 
 struct GLFWwindow;
 class Camera
 {
 public:
 	glm::vec3 m_position{};
+	glm::mat4 m_view{}, m_projection{};
 	float m_yaw{}, m_pitch{};
-	float m_sensitive{0.3f}, m_speed{1.f / 16.f}, m_fov{60.0f};
+	float m_sensitive{0.005f}, m_speed{0.0625f}, m_fov{PIF / 3.0f};
+
 private:
+	struct GLCamera
+	{
+		glm::mat4 m_projection;
+		glm::mat4 m_view;
+		float m_x, m_y, m_z, m_inv_cos_half_fov;
+	} *m_ubo_ptr;
+	mygl3::Buffer m_ubo;
 	void move_forward(float dist, float dir) //degrees
 	{
-		float rad = glm::radians(m_yaw + dir);
-		m_position.x -= glm::sin(rad) * dist;
-		m_position.z -= glm::cos(rad) * dist;
+		m_position.x -= glm::sin(m_yaw + dir) * dist;
+		m_position.z -= glm::cos(m_yaw + dir) * dist;
 	}
 
 public:
-	glm::mat4 GetView() const;
-	glm::mat4 GetProjection() const;
-
+	void Initialize();
 	void Control(GLFWwindow *window, const mygl3::Framerate &fps);
+	void Update();
+	const mygl3::Buffer &GetBuffer() const { return m_ubo; }
+	//const glm::mat4 &GetView() const { return m_view; }
+	//const glm::mat4 &GetProjection() const { return m_projection; }
 };
 
 #endif //ADYPT_CAMERA_HPP

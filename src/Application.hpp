@@ -8,7 +8,9 @@
 #include <mygl3/utils/framerate.hpp>
 #include "Scene.hpp"
 #include "DeepGBuffer.hpp"
+#include "ShadowMap.hpp"
 #include "ScreenQuad.hpp"
+#include "GIRenderer.hpp"
 #include <GLFW/glfw3.h>
 
 class Application
@@ -18,6 +20,8 @@ private:
 	Camera m_camera;
 	Scene m_scene;
 	DeepGBuffer m_gbuffer;
+	ShadowMap m_shadowmap;
+	GIRenderer m_renderer;
 	mygl3::Framerate m_fps;
 
 	mygl3::Shader m_tester;

@@ -3,6 +3,7 @@
 //
 
 #include <cstdio>
+#include <glm/gtc/matrix_transform.hpp>
 #include "Application.hpp"
 #include "Config.hpp"
 
@@ -19,6 +20,8 @@ Application::Application()
 
 	gl3wInit();
 
+	m_camera.Initialize();
+
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/sibenik/sibenik.obj");
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/living_room/living_room.obj");
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/San_Miguel/san-miguel-low-poly.obj");
@@ -32,6 +35,11 @@ Application::Application()
 	m_tester.Initialize();
 	m_tester.LoadFromFile("shaders/tester.vert", GL_VERTEX_SHADER);
 	m_tester.LoadFromFile("shaders/tester.frag", GL_FRAGMENT_SHADER);
+
+	m_shadowmap.Initialize();
+	m_shadowmap.Update(m_scene, {-24.6f, 50.0f, 12.0f});
+
+	m_renderer.Initialize();
 }
 
 Application::~Application()
@@ -45,16 +53,19 @@ void Application::Run()
 	char title[64];
 	while(!glfwWindowShouldClose(m_window))
 	{
+		glViewport(0, 0, kWidth, kHeight);
 		m_fps.Update();
 		m_camera.Control(m_window, m_fps);
+		m_camera.Update();
 
 		sprintf(title, "fps: %f", m_fps.GetFps());
 		glfwSetWindowTitle(m_window, title);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 		m_gbuffer.Update(m_scene, m_camera);
-		m_gbuffer.GetAlbedo().Bind(2);
+		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
+
+		m_renderer.GetRadiance().Bind(2);
 		m_tester.Use();
 		m_quad.Render();
 

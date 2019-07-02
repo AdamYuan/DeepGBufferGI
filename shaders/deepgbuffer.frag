@@ -6,7 +6,6 @@ layout (binding = 1) uniform sampler2D uLastDepthTexture;
 
 layout (location = 0) out vec3 oAlbedo;
 layout (location = 1) out vec2 oNormal;
-layout (location = 2) out vec3 oRadiance;
 
 in vec3 gNormal;
 in vec2 gTexcoords;

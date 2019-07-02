@@ -8,18 +8,12 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-glm::mat4 Camera::GetView() const
+void Camera::Initialize()
 {
-	glm::mat4 view = glm::rotate(glm::identity<glm::mat4>(), glm::radians(-m_pitch), glm::vec3(1.0f, 0.0f, 0.0f));
-	view = glm::rotate(view, glm::radians(-m_yaw), glm::vec3(0.0f, 1.0f, 0.0f));
-	view = glm::translate(view, -m_position);
-
-	return view;
-}
-
-glm::mat4 Camera::GetProjection() const
-{
-	return glm::perspective(glm::radians(m_fov), kCamAspectRatio, kCamNear, kCamFar);
+	m_ubo.Initialize();
+	GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+	m_ubo.Storage(sizeof(GLCamera), flags);
+	m_ubo_ptr = (GLCamera *) glMapNamedBufferRange(m_ubo.Get(), 0, sizeof(GLCamera), flags);
 }
 
 void Camera::Control(GLFWwindow *window, const mygl3::Framerate &fps)
@@ -29,11 +23,11 @@ void Camera::Control(GLFWwindow *window, const mygl3::Framerate &fps)
 	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		move_forward(speed, 0.0f);
 	if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		move_forward(speed, 90.0f);
+		move_forward(speed, PIF * 0.5f);
 	if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		move_forward(speed, -90.0f);
+		move_forward(speed, -PIF * 0.5f);
 	if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		move_forward(speed, 180.0f);
+		move_forward(speed, PIF);
 	if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 		m_position.y += speed;
 	if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
@@ -50,11 +44,35 @@ void Camera::Control(GLFWwindow *window, const mygl3::Framerate &fps)
 
 		m_yaw -= offset_x;
 		m_pitch -= offset_y;
-		m_pitch = glm::clamp(m_pitch, -90.0f, 90.0f);
-		m_yaw = glm::mod(m_yaw, 360.0f);
+		m_pitch = glm::clamp(m_pitch, -PIF * 0.5f, PIF * 0.5f);
+		m_yaw = glm::mod(m_yaw, PIF * 2);
 		last_mouse_pos = cur_pos;
 	}
 
 	last_mouse_pos = cur_pos;
+}
+
+void Camera::Update()
+{
+	m_view = glm::rotate(glm::identity<glm::mat4>(), -m_pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+	m_view = glm::rotate(m_view, -m_yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+	m_view = glm::translate(m_view, -m_position);
+
+	m_projection = glm::perspective(m_fov, kCamAspectRatio, kCamNear, kCamFar);
+
+	//sync
+	glMemoryBarrier(GL_ATOMIC_COUNTER_BARRIER_BIT);
+	GLsync sync_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	GLenum wait_return = GL_UNSIGNALED;
+	while (wait_return != GL_ALREADY_SIGNALED && wait_return != GL_CONDITION_SATISFIED)
+		wait_return = glClientWaitSync(sync_fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
+	glDeleteSync(sync_fence);
+	//set values
+	m_ubo_ptr->m_projection = m_projection;
+	m_ubo_ptr->m_view = m_view;
+	m_ubo_ptr->m_x = m_position.x;
+	m_ubo_ptr->m_y = m_position.y;
+	m_ubo_ptr->m_z = m_position.z;
+	m_ubo_ptr->m_inv_cos_half_fov = 1.0f / glm::cos(m_fov * 0.5f);
 }
 

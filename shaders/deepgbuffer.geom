@@ -14,7 +14,14 @@ out vec4 gLastScreenPos;
 flat out int gTexture;
 flat out vec3 gDiffuseColor;
 
-uniform mat4 uProjection, uView, uLastView;
+layout(std140, binding = 1) uniform uuCamera
+{
+	mat4 uProjection;
+	mat4 uView;
+	float uX, uY, uZ, uInvCosHalfFov;
+};
+
+uniform mat4 uLastView;
 
 void main()
 {
@@ -27,22 +34,20 @@ void main()
 	vec4 last_pos0 = uProjection * uLastView * gl_in[0].gl_Position;
 	vec4 last_pos1 = uProjection * uLastView * gl_in[1].gl_Position;
 	vec4 last_pos2 = uProjection * uLastView * gl_in[2].gl_Position;
-	vec3 norm0 = mat3(uView) * vNormal[0];
-	vec3 norm1 = mat3(uView) * vNormal[1];
-	vec3 norm2 = mat3(uView) * vNormal[2];
+
 
 	gl_Layer = 0;
 	{ //the first layer
 		gTexcoords = vTexcoords[0];
-		gNormal = norm0;
+		gNormal = vNormal[0];
 		gl_Position = pos0;
 		EmitVertex();
 		gTexcoords = vTexcoords[1];
-		gNormal = norm1;
+		gNormal = vNormal[1];
 		gl_Position = pos1;
 		EmitVertex();
 		gTexcoords = vTexcoords[2];
-		gNormal = norm2;
+		gNormal = vNormal[2];
 		gl_Position = pos2;
 		EmitVertex();
 		EndPrimitive();
@@ -51,17 +56,17 @@ void main()
 	gl_Layer = 1;
 	{ //the second layer
 		gTexcoords = vTexcoords[0];
-		gNormal = norm0;
+		gNormal = vNormal[0];
 		gLastScreenPos = last_pos0;
 		gl_Position = pos0;
 		EmitVertex();
 		gTexcoords = vTexcoords[1];
-		gNormal = norm1;
+		gNormal = vNormal[1];
 		gLastScreenPos = last_pos1;
 		gl_Position = pos1;
 		EmitVertex();
 		gTexcoords = vTexcoords[2];
-		gNormal = norm2;
+		gNormal = vNormal[2];
 		gLastScreenPos = last_pos2;
 		gl_Position = pos2;
 		EmitVertex();

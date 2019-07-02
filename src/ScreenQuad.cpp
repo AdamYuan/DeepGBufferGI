@@ -18,7 +18,7 @@ void ScreenQuad::Initialize()
 	glVertexArrayVertexBuffer(m_vao.Get(), 0, m_vbo.Get(), 0, 2 * sizeof(GLfloat));
 }
 
-void ScreenQuad::Render()
+void ScreenQuad::Render() const
 {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);

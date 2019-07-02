@@ -15,7 +15,7 @@ private:
 	mygl3::VertexArray m_vao;
 public:
 	void Initialize();
-	void Render();
+	void Render() const;
 };
 
 
