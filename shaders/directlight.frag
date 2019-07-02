@@ -25,6 +25,7 @@ vec3 ReconstructPosition(in const vec2 texcoords)
 	return rec.xyz / rec.w;
 }
 
+//copied from https://github.com/TheRealMJP/Shadows/blob/master/Shadows/MSM.hlsl (MIT License)
 vec4 ConvertMoments(vec4 optimized_moments) {
 	optimized_moments[0] -= 0.0359558848;
 	const mat4 mat = mat4(0.2227744146, 0.1549679261, 0.1451988946, 0.163127443,
@@ -82,6 +83,8 @@ float ComputeMSMHamburger(in vec4 moments, in float depth, in float depth_bias, 
 	float shadow_intensity = switch_val[2] + switch_val[3] * quotient;
 	return 1.0f - clamp(shadow_intensity, 0.0, 1.0);
 }
+
+
 float SampleShadow(in const vec3 position)
 {
 	vec4 transformed = uShadowTransform * vec4(position, 1.0f);

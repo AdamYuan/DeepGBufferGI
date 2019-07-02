@@ -7,6 +7,7 @@ layout (location = 0) out vec4 oShadowColor;
 in vec2 vTexcoords;
 flat in int vTexture;
 
+//copied from https://github.com/TheRealMJP/Shadows/blob/master/Shadows/MSM.hlsl (MIT License)
 vec4 ComputeMoments(in const float depth)
 {
 	float square = depth * depth;

@@ -1,4 +1,5 @@
 #version 450 core
+//Based on https://github.com/Jam3/glsl-fast-gaussian-blur/ (MIT licensed)
 
 in vec2 vTexcoords;
 layout (binding = 2) uniform sampler2D uShadowMap;
