@@ -4,7 +4,7 @@ layout(std140, binding = 1) uniform uuCamera
 {
 	mat4 uProjection;
 	mat4 uView;
-	float uX, uY, uZ, uInvCosHalfFov;
+	vec4 uPosition;
 };
 
 layout (binding = 2) uniform sampler2D uShadowMap;
@@ -95,7 +95,7 @@ float SampleShadow(in const vec3 position)
 	vec4 moments = ConvertMoments(texture2D(uShadowMap, coord.xy));
 
 	float shadow = ComputeMSMHamburger(moments, coord.z, 0.0f, 3e-5f);
-	shadow = smoothstep(0.65f, 1.0f, shadow);
+	shadow = smoothstep(0.7f, 1.0f, shadow);
 	return shadow;
 }
 
@@ -116,5 +116,5 @@ void main()
 	vec3 normal = oct_to_float32x3( texture(uNormal, vec3(gTexcoords, gl_Layer)).rg );
 
 	oRadiance = max( dot(normal, -uLightDir), 0.0f ) * vec3(5, 4, 4) * SampleShadow(position) * albedo;
-	oRadiance += albedo * vec3(0.2, 0.16, 0.16);
+	oRadiance += albedo * vec3(0.02, 0.016, 0.016);
 }

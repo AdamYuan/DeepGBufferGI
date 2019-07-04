@@ -70,9 +70,6 @@ void Camera::Update()
 	//set values
 	m_ubo_ptr->m_projection = m_projection;
 	m_ubo_ptr->m_view = m_view;
-	m_ubo_ptr->m_x = m_position.x;
-	m_ubo_ptr->m_y = m_position.y;
-	m_ubo_ptr->m_z = m_position.z;
-	m_ubo_ptr->m_inv_cos_half_fov = 1.0f / glm::cos(m_fov * 0.5f);
+	m_ubo_ptr->m_position = glm::vec4(m_position, 1.0f);
 }
 

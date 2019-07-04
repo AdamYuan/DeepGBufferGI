@@ -1,6 +1,18 @@
 #version 450 core
-#define TEST_SCENE
+//#define TEST_SCENE
+#define TEST_RADIOSITY
 //#define TEST_SHADOW
+
+#ifdef TEST_RADIOSITY
+out vec4 oColor;
+layout (binding = 2) uniform sampler2D uTexture;
+in vec2 vTexcoords;
+
+void main()
+{
+	oColor = vec4(pow(texture(uTexture, vTexcoords).rgb, vec3(1.0f / 2.2f)) , 1);
+}
+#endif
 
 #ifdef TEST_SCENE
 out vec4 oColor;

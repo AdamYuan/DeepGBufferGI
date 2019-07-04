@@ -50,7 +50,8 @@ void DeepGBuffer::Update(const Scene &scene, const Camera &camera)
 	glViewport(0, 0, kWidth, kHeight);
 
 	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_shader.Use();

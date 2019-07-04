@@ -2,7 +2,6 @@
 // Created by adamyuan on 19-5-3.
 //
 
-#include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
 #include "Application.hpp"
 #include "Config.hpp"
@@ -85,8 +84,9 @@ void Application::Run()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		m_gbuffer.Update(m_scene, m_camera);
 		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
+		m_renderer.Radiosity(m_quad, m_camera, m_gbuffer);
 
-		m_renderer.GetRadiance().Bind(2);
+		m_renderer.GetTmpRadiance().Bind(2);
 		//m_shadowmap.GetTexture().Bind(2);
 		m_tester.Use();
 		m_quad.Render();

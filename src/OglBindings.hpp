@@ -11,8 +11,9 @@ constexpr GLuint kTextureUBO = 0;
 constexpr GLuint kCameraUBO = 1;
 constexpr GLuint kLastDepthSampler2D = 1;
 constexpr GLuint kShadowMapSampler2D = 2;
-constexpr GLuint kGBufferAlbedoSampler2D = 3;
-constexpr GLuint kGBufferNormalSampler2D = 4;
-constexpr GLuint kGBufferDepthSampler2D = 5;
+constexpr GLuint kAlbedoSampler2DArray = 3;
+constexpr GLuint kNormalSampler2DArray = 4;
+constexpr GLuint kDepthSampler2DArray = 5;
+constexpr GLuint kRadianceSampler2DArray = 6;
 
 #endif //SPARSEVOXELOCTREE_OGLBINDINGS_HPP
