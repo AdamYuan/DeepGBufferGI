@@ -116,5 +116,4 @@ void main()
 	vec3 normal = oct_to_float32x3( texture(uNormal, vec3(gTexcoords, gl_Layer)).rg );
 
 	oRadiance = max( dot(normal, -uLightDir), 0.0f ) * vec3(5, 4, 4) * SampleShadow(position) * albedo;
-	oRadiance += albedo * vec3(0.02, 0.016, 0.016);
 }

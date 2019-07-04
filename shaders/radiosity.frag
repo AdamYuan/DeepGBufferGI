@@ -24,12 +24,12 @@ const int kN = 14;
 const int kN = 30;
 #endif
 
-const float kRP = 0.5; //screen space sample radius
+const float kR = 0.4; //world space sample radius
 const float kQ = 0.05; //screen space radius which we first increase mip-level
 const float kInvN = 1.0f / float(kN);
 const float kTwoPi = 6.283185307179586f;
 // tau[N-1] = optimal number of spiral turns for N samples
-const int tau[98] = {1, 1, 2, 3, 2, 5, 2, 3, 2, 3, 3, 5, 5, 3, 4,
+const int tau[] = {1, 1, 2, 3, 2, 5, 2, 3, 2, 3, 3, 5, 5, 3, 4,
 	7, 5, 5, 7, 9, 8, 5, 5, 7, 7, 7, 8, 5, 8, 11, 12, 7, 10, 13, 8,
 	11, 8, 7, 14, 11, 11, 13, 12, 13, 19, 17, 13, 11, 18, 19, 11, 11,
 	14, 17, 21, 15, 16, 17, 18, 13, 17, 11, 17, 19, 18, 25, 18, 19,
@@ -38,9 +38,9 @@ const int tau[98] = {1, 1, 2, 3, 2, 5, 2, 3, 2, 3, 3, 5, 5, 3, 4,
 
 in vec2 vTexcoords;
 
-vec3 ReconstructPosition(in const vec3 texcoords)
+vec3 ReconstructPosition(in const vec2 texcoords, in float depth)
 {
-	vec4 clip = vec4(texcoords.xy * 2.0f - 1.0f, texture(uDepth, texcoords).r * 2.0f - 1.0f, 1.0f);
+	vec4 clip = vec4(texcoords * 2.0f - 1.0f, depth * 2.0f - 1.0f, 1.0f);
 	vec4 rec = inverse(uProjection * uView) * clip;
 	return rec.xyz / rec.w;
 }
@@ -56,28 +56,41 @@ vec3 oct_to_float32x3(vec2 e)
 	return normalize(v);
 }
 
+const float kNear = 1.0f / 512.0f, kFar = 4.0f;
+float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + kNear - depth * (kFar - kNear)); }
+
 void main()
 {
 	vec3 x_coord = vec3(vTexcoords, 0.0f);
-	vec3 x_position = ReconstructPosition(x_coord);
+	float x_depth = texture(uDepth, x_coord).r;
+	vec3 x_position = ReconstructPosition(vTexcoords, x_depth);
 	vec3 x_albedo = texture(uAlbedo, x_coord).rgb;
 	vec3 x_normal = oct_to_float32x3( texture(uNormal, x_coord).rg );
 	vec3 x_radiance = texture(uRadiance, x_coord).xyz;
 
-	float hash = Hash(vTexcoords);
+	float rp = kR * 0.25f / LinearDepth(x_depth * 2.0f - 1.0f);
+
+	float hash = Hash(vTexcoords) * kTwoPi;
 
 	vec3 radiance = vec3(0);
 	int m = 0;
 	for(int i = 0; i < kN; ++i)
 	{
 		float k = (float(i) + 0.5f) / float(kN);
-		float theta = kTwoPi*tau[i]*k * hash;
-		float h = k * kRP;
+		float theta = kTwoPi*tau[kN - 1]*k + hash;
+		float h = k * rp;
 		vec2 u = vec2(cos(theta), sin(theta));
-		float mip = log2(h / kQ);
+		float mip = floor(log2(h / kQ));
+
+#if PERFORMANCE_MODE == 0
+		mip = max(mip, 3.0f);
+#elif PERFORMANCE_MODE == 1
+		mip = max(mip, 2.0f);
+#endif
 
 		vec3 y_coord = vec3(vTexcoords + u*h, float(i & 1));
-		vec3 y_position = ReconstructPosition(y_coord);
+		float y_depth = texture(uDepth, y_coord).r;
+		vec3 y_position = ReconstructPosition(y_coord.xy, y_depth);
 		vec3 y_normal = oct_to_float32x3( texture(uNormal, y_coord).rg );
 
 		vec3 omega = normalize(y_position - x_position);
@@ -91,5 +104,5 @@ void main()
 		}
 	}
 	if(m > 0) radiance *= kTwoPi / float(m);
-	oRadiance = x_radiance + radiance * x_albedo;
+	oRadiance = radiance * x_albedo;
 }

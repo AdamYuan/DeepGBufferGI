@@ -22,6 +22,7 @@ private:
 	DeepGBuffer m_gbuffer;
 	ShadowMap m_shadowmap;
 	GIRenderer m_renderer;
+	GIBlurer m_gi_blurer;
 	mygl3::Framerate m_fps;
 
 	ScreenQuad m_quad;

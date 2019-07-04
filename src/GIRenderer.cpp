@@ -14,14 +14,14 @@ void GIRenderer::Initialize()
 	m_radiance.SetSizeFilter(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 	m_radiance.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
-	m_tmp_radiance.Initialize();
-	m_tmp_radiance.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
+	m_gi_radiance.Initialize();
+	m_gi_radiance.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
 
 	m_direct_light_fbo.Initialize();
 	m_direct_light_fbo.AttachTexture(m_radiance, GL_COLOR_ATTACHMENT0);
 
 	m_radiosity_fbo.Initialize();
-	m_radiosity_fbo.AttachTexture(m_tmp_radiance, GL_COLOR_ATTACHMENT0);
+	m_radiosity_fbo.AttachTexture(m_gi_radiance, GL_COLOR_ATTACHMENT0);
 
 	m_direct_light_shader.Initialize();
 	m_direct_light_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
@@ -73,5 +73,48 @@ void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const D
 	m_radiosity_shader.Use();
 	quad.Render();
 
+	mygl3::FrameBuffer::Unbind();
+}
+
+void GIBlurer::Initialize(const GIRenderer &renderer)
+{
+	m_tmp_texture.InitializeWithoutTarget();
+	glTextureView(m_tmp_texture.Get(), GL_TEXTURE_2D, renderer.GetRadiance().Get(), GL_R11F_G11F_B10F, 0, 1, 1, 1);
+	//use the second layer of m_radiance as tmp texture
+	m_tmp_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
+	m_tmp_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
+
+	m_target = &renderer.GetGIRadiance();
+
+	m_shader.Initialize();
+	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_shader.LoadFromFile("shaders/radiosity_blur.frag", GL_FRAGMENT_SHADER);
+	m_unif_direction = m_shader.GetUniform("uDirection");
+
+	m_blur_fbo[0].Initialize();
+	m_blur_fbo[0].AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
+	m_blur_fbo[1].Initialize();
+	m_blur_fbo[1].AttachTexture(*m_target, GL_COLOR_ATTACHMENT0);
+}
+
+void GIBlurer::Blur(const ScreenQuad &quad)
+{
+	constexpr GLfloat dir0[] = {1.0f, 0.0f}, dir1[] = {0.0f, 1.0f};
+	m_shader.Use();
+
+	m_blur_fbo[0].Bind();
+	glViewport(0, 0, kWidth, kHeight);
+	glClear(GL_COLOR_BUFFER_BIT);
+	m_target->Bind(kGIRadianceSampler2D);
+	m_shader.SetVec2(m_unif_direction, dir0);
+	quad.Render();
+	mygl3::FrameBuffer::Unbind();
+
+	m_blur_fbo[1].Bind();
+	glViewport(0, 0, kWidth, kHeight);
+	glClear(GL_COLOR_BUFFER_BIT);
+	m_tmp_texture.Bind(kGIRadianceSampler2D);
+	m_shader.SetVec2(m_unif_direction, dir1);
+	quad.Render();
 	mygl3::FrameBuffer::Unbind();
 }

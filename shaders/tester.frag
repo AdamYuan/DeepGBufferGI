@@ -5,12 +5,14 @@
 
 #ifdef TEST_RADIOSITY
 out vec4 oColor;
-layout (binding = 2) uniform sampler2D uTexture;
+layout (binding = 6) uniform sampler2DArray uRadiance;
+layout (binding = 7) uniform sampler2D uGIRadiance;
 in vec2 vTexcoords;
 
 void main()
 {
-	oColor = vec4(pow(texture(uTexture, vTexcoords).rgb, vec3(1.0f / 2.2f)) , 1);
+	vec3 color = texture(uRadiance, vec3(vTexcoords, 0)).rgb + texture(uGIRadiance, vTexcoords).rgb;
+	oColor = vec4(pow(color, vec3(1.0f / 2.2f)) , 1);
 }
 #endif
 

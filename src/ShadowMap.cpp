@@ -54,11 +54,13 @@ void ShadowMap::Update(const Scene &scene, const glm::vec3 &sun_pos)
 	mygl3::FrameBuffer::Unbind();
 }
 
-void ShadowMapBlurer::Initialize()
+void ShadowMapBlurer::Initialize(const ShadowMap &shadowmap)
 {
 	m_tmp_texture.Initialize();
 	m_tmp_texture.Storage(kShadowMapSize, kShadowMapSize, GL_RGBA16);
 	m_tmp_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
+
+	m_target = &shadowmap.GetTexture();
 
 	m_shader.Initialize();
 	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
@@ -68,9 +70,10 @@ void ShadowMapBlurer::Initialize()
 	m_blur_fbo[0].Initialize();
 	m_blur_fbo[0].AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
 	m_blur_fbo[1].Initialize();
+	m_blur_fbo[1].AttachTexture(*m_target, GL_COLOR_ATTACHMENT0);
 }
 
-void ShadowMapBlurer::Blur(const ScreenQuad &quad, const ShadowMap &shadowmap)
+void ShadowMapBlurer::Blur(const ScreenQuad &quad)
 {
 	constexpr GLfloat dir0[] = {1.0f, 0.0f}, dir1[] = {0.0f, 1.0f};
 	m_shader.Use();
@@ -78,12 +81,11 @@ void ShadowMapBlurer::Blur(const ScreenQuad &quad, const ShadowMap &shadowmap)
 	m_blur_fbo[0].Bind();
 	glViewport(0, 0, kShadowMapSize, kShadowMapSize);
 	glClear(GL_COLOR_BUFFER_BIT);
-	shadowmap.GetTexture().Bind(kShadowMapSampler2D);
+	m_target->Bind(kShadowMapSampler2D);
 	m_shader.SetVec2(m_unif_direction, dir0);
 	quad.Render();
 	mygl3::FrameBuffer::Unbind();
 
-	m_blur_fbo[1].AttachTexture(shadowmap.GetTexture(), GL_COLOR_ATTACHMENT0);
 	m_blur_fbo[1].Bind();
 	glViewport(0, 0, kShadowMapSize, kShadowMapSize);
 	glClear(GL_COLOR_BUFFER_BIT);

@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Application.hpp"
 #include "Config.hpp"
+#include "OglBindings.hpp"
 
 Application::Application()
 {
@@ -39,10 +40,11 @@ Application::Application()
 	m_shadowmap.Update(m_scene, {-24.6f, 50.0f, 12.0f});
 
 	ShadowMapBlurer shadowmap_blurer;
-	shadowmap_blurer.Initialize();
-	shadowmap_blurer.Blur(m_quad, m_shadowmap);
+	shadowmap_blurer.Initialize(m_shadowmap);
+	shadowmap_blurer.Blur(m_quad);
 
 	m_renderer.Initialize();
+	m_gi_blurer.Initialize(m_renderer);
 
 	/*m_test_texture.Initialize();
 	m_test_texture.Storage(kWidth, kHeight, GL_RGBA8);
@@ -81,12 +83,13 @@ void Application::Run()
 		sprintf(title, "fps: %f", m_fps.GetFps());
 		glfwSetWindowTitle(m_window, title);
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		m_gbuffer.Update(m_scene, m_camera);
 		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
 		m_renderer.Radiosity(m_quad, m_camera, m_gbuffer);
+		m_gi_blurer.Blur(m_quad);
 
-		m_renderer.GetTmpRadiance().Bind(2);
+		m_renderer.GetRadiance().Bind(kRadianceSampler2DArray);
+		m_renderer.GetGIRadiance().Bind(kGIRadianceSampler2D);
 		//m_shadowmap.GetTexture().Bind(2);
 		m_tester.Use();
 		m_quad.Render();

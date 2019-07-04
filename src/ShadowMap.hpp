@@ -35,12 +35,13 @@ class ShadowMapBlurer
 {
 private:
 	mygl3::Texture2D m_tmp_texture;
+	const mygl3::Texture2D *m_target;
 	mygl3::Shader m_shader;
 	GLint m_unif_direction;
 	mygl3::FrameBuffer m_blur_fbo[2];
 public:
-	void Initialize();
-	void Blur(const ScreenQuad &quad, const ShadowMap &shadowmap);
+	void Initialize(const ShadowMap &shadowmap);
+	void Blur(const ScreenQuad &quad);
 };
 
 #endif //DEEPGBUFFERGI_SHADOWMAP_HPP

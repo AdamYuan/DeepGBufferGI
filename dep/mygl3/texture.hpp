@@ -20,6 +20,7 @@ NAME(NAME &&texture) noexcept : id_(texture.id_) { texture.id_ = kInvalidOglId; 
 ~NAME() { if(IsValidOglId(id_)) glDeleteTextures(1, &id_); } \
 NAME (const NAME&) = delete; \
  void Initialize() { glCreateTextures(TARGET, 1, &id_); } \
+ void InitializeWithoutTarget() { glGenTextures(1, &id_); } \
  void Bind(GLuint unit) const { glBindTextureUnit(unit, id_); } \
  void SetSizeFilter(GLenum min_filter, GLenum mag_filter) { \
     glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, min_filter); \
