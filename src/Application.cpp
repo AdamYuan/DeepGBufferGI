@@ -28,6 +28,7 @@ Application::Application()
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/living_room/living_room.obj");
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/San_Miguel/san-miguel-low-poly.obj");
 	m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/sponza/sponza.obj");
+	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/CornellBox/CornellBox-Original.obj");
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/vokselia_spawn/vokselia_spawn.obj");
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/fireplace_room/fireplace_room.obj");
 

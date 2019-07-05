@@ -1,6 +1,6 @@
 #version 450 core
 
-#define PERFORMANCE_MODE 0
+#define PERFORMANCE_MODE 2
 
 layout(std140, binding = 1) uniform uuCamera
 {
@@ -14,18 +14,20 @@ layout (binding = 4) uniform sampler2DArray uNormal;
 layout (binding = 5) uniform sampler2DArray uDepth;
 layout (binding = 6) uniform sampler2DArray uRadiance; //input radiance
 
+uniform float uTime;
+
 out vec3 oRadiance;
 
 #if PERFORMANCE_MODE == 0
-const int kN = 13;
+const int kN = 26;
 #elif PERFORMANCE_MODE == 1
-const int kN = 14;
+const int kN = 28;
 #else
-const int kN = 30;
+const int kN = 60;
 #endif
 
-const float kR = 0.4; //world space sample radius
-const float kQ = 0.05; //screen space radius which we first increase mip-level
+const float kR = 0.25f; //world space sample radius
+const float kQ = 64; //screen space radius which we first increase mip-level
 const float kInvN = 1.0f / float(kN);
 const float kTwoPi = 6.283185307179586f;
 // tau[N-1] = optimal number of spiral turns for N samples
@@ -61,48 +63,65 @@ float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + 
 
 void main()
 {
-	vec3 x_coord = vec3(vTexcoords, 0.0f);
-	float x_depth = texture(uDepth, x_coord).r;
-	vec3 x_position = ReconstructPosition(vTexcoords, x_depth);
-	vec3 x_albedo = texture(uAlbedo, x_coord).rgb;
-	vec3 x_normal = oct_to_float32x3( texture(uNormal, x_coord).rg );
-	vec3 x_radiance = texture(uRadiance, x_coord).xyz;
+	ivec2 resolution = textureSize(uDepth, 0).xy;
+	ivec2 icoord = ivec2(gl_FragCoord.xy);
+	ivec3 x_coord = ivec3(icoord, 0);
+	float x_depth = texelFetch(uDepth, x_coord, 0).r;
+	vec3 x_position = ReconstructPosition(vec2(x_coord.xy) / vec2(resolution), x_depth);
+	vec3 x_albedo = texelFetch(uAlbedo, x_coord, 0).rgb;
+	vec3 x_normal = oct_to_float32x3( texelFetch(uNormal, x_coord, 0).rg );
+	vec3 x_radiance = texelFetch(uRadiance, x_coord, 0).xyz;
 
-	float rp = kR * 0.25f / LinearDepth(x_depth * 2.0f - 1.0f);
-
-	float hash = Hash(vTexcoords) * kTwoPi;
+	float rp = kR * 500 / LinearDepth(x_depth * 2.0f - 1.0f);
 
 	vec3 radiance = vec3(0);
-	int m = 0;
+	int sample_used = 0;
+
+	float hash = (3 * icoord.x ^ icoord.y + icoord.x * icoord.y) * 10.0f + uTime;
+    float radial_jitter = fract(sin(gl_FragCoord.x * 1e2 + 
+            uTime +
+        gl_FragCoord.y) * 1e5 + sin(gl_FragCoord.y * 1e3) * 1e3) * 0.8 + 0.1;
+
 	for(int i = 0; i < kN; ++i)
 	{
-		float k = (float(i) + 0.5f) / float(kN);
+		float k = (float(i) + radial_jitter) * kInvN;
 		float theta = kTwoPi*tau[kN - 1]*k + hash;
 		float h = k * rp;
 		vec2 u = vec2(cos(theta), sin(theta));
-		float mip = floor(log2(h / kQ));
 
+		int mip = min(int(floor(log2(h / kQ))), 5);
 #if PERFORMANCE_MODE == 0
-		mip = max(mip, 3.0f);
+		mip = max(mip, 3);
 #elif PERFORMANCE_MODE == 1
-		mip = max(mip, 2.0f);
+		mip = max(mip, 2);
 #endif
+		ivec3 y_coord = ivec3(icoord + ivec2(u * h), (i & 1));
+		if(y_coord.xy != clamp(y_coord.xy, ivec2(0), resolution)) continue; //skip out of range part
 
-		vec3 y_coord = vec3(vTexcoords + u*h, float(i & 1));
-		float y_depth = texture(uDepth, y_coord).r;
-		vec3 y_position = ReconstructPosition(y_coord.xy, y_depth);
-		vec3 y_normal = oct_to_float32x3( texture(uNormal, y_coord).rg );
+		float y_depth = texelFetch(uDepth, y_coord, 0).r;
+		vec3 y_position = ReconstructPosition(vec2(y_coord.xy) / vec2(resolution), y_depth);
+		vec3 y_normal = oct_to_float32x3( texelFetch(uNormal, y_coord, 0).rg );
 
-		vec3 omega = normalize(y_position - x_position);
+		vec3 omega = y_position - x_position;
 #if PERFORMANCE_MODE != 0
-		if(dot(omega, x_normal) > 0 && dot(omega, y_normal) < 0)
+		int weight = (dot(omega, x_normal) > 0 && dot(-omega, y_normal) > 0) ? 1 : 0;
+#else
+		int weight = 1;
 #endif
+
+		if(dot(omega, omega) > kR*kR)
+			weight = 0;
+
+		sample_used += weight;
+		if(weight == 1)
 		{
-			++m;
-			vec3 samp = textureLod(uRadiance, y_coord, mip).xyz;
-			radiance += samp * max(0.0f, dot(omega, x_normal));
+			vec3 y_radiance = texelFetch(uRadiance, ivec3(y_coord.xy >> mip, y_coord.z), mip).xyz;
+			float vmax = max(y_radiance.x, max(y_radiance.y, y_radiance.z));
+			float vmin = min(y_radiance.x, min(y_radiance.y, y_radiance.z));
+			float boost = (vmax - vmin) / max(vmax, 1e-9);
+			radiance += weight * y_radiance * boost * max(0.0f, dot( normalize(omega), x_normal));
 		}
 	}
-	if(m > 0) radiance *= kTwoPi / float(m);
-	oRadiance = radiance * x_albedo;
+	radiance *= kTwoPi / (float(sample_used) + 1e-4f);
+	oRadiance = radiance * x_albedo + x_albedo * 0.01f;
 }

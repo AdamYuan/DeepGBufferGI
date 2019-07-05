@@ -11,10 +11,13 @@ void DeepGBuffer::Initialize()
 {
 	m_albedo.Initialize();
 	m_albedo.Storage(kWidth, kHeight, 2, GL_RGB8);
+	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 	m_normal.Initialize();
 	m_normal.Storage(kWidth, kHeight, 2, GL_RG8_SNORM);
+	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 	m_depth.Initialize();
 	m_depth.Storage(kWidth, kHeight, 2, GL_DEPTH_COMPONENT32);
+	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
 	m_last_depth.Initialize();
 	m_last_depth.Storage(kWidth, kHeight, GL_DEPTH_COMPONENT32);
@@ -50,8 +53,7 @@ void DeepGBuffer::Update(const Scene &scene, const Camera &camera)
 	glViewport(0, 0, kWidth, kHeight);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	glDisable(GL_CULL_FACE);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	m_shader.Use();
