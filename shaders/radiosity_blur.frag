@@ -1,39 +1,118 @@
+//from https://casual-effects.com/research/Mara2016DeepGBuffer/
 #version 450 core
-//Based on https://github.com/Jam3/glsl-fast-gaussian-blur/ (MIT licensed)
+
+#define R 4
+
+#define SCALE 2
+#define EDGE_SHARPNESS 0.5f
+
+//predefine kernels
+#       if R == 1 
+float kKernel[R + 1] = {0.5,      0.25};
+#       elif R == 2 
+float kKernel[R + 1] = {0.153170, 0.144893, 0.122649};
+#       elif R == 3 
+float kKernel[R + 1] = {0.153170, 0.144893, 0.122649, 0.092902};
+#       elif R == 4 
+float kKernel[R + 1] = {0.153170, 0.144893, 0.122649, 0.092902, 0.062970};
+#       elif R == 5 
+float kKernel[R + 1] = {0.111220, 0.107798, 0.098151, 0.083953, 0.067458, 0.050920};
+#       elif R == 6
+float kKernel[R + 1] = {0.111220, 0.107798, 0.098151, 0.083953, 0.067458, 0.050920, 0.036108};
+#       endif
 
 in vec2 vTexcoords;
+layout(std140, binding = 1) uniform uuCamera
+{
+	mat4 uProjection;
+	mat4 uView;
+	mat4 uInvPV;
+};
+layout (binding = 4) uniform sampler2DArray uNormal;
+layout (binding = 5) uniform sampler2DArray uDepth;
 layout (binding = 7) uniform sampler2D uGIRadiance;
-uniform vec2 uDirection;
+uniform ivec2 uDirection; //(1, 0) or (0, 1)
 out vec3 oBlured;
+
+vec3 ReconstructPosition(in const ivec2 coord, in float depth)
+{
+	vec2 texcoords = vec2(coord) / vec2(1280, 720);
+	vec4 clip = vec4(texcoords * 2.0f - 1.0f, depth * 2.0f - 1.0f, 1.0f);
+	vec4 rec = uInvPV * clip;
+	return rec.xyz / rec.w;
+}
+
+const float kNear = 1.0f / 512.0f, kFar = 4.0f;
+float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + kNear - depth * (kFar - kNear)); }
+float GetDepth(in const ivec2 coord)  { return texelFetch(uDepth, ivec3(coord, 0), 0).r; }
+//oct16 normal decoding :
+// Returns ±1
+vec2 SignNotZero(vec2 v) { return vec2((v.x >= 0.0) ? 1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0); }
+vec3 oct_to_float32x3(vec2 e)
+{
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * SignNotZero(v.xy);
+	return normalize(v);
+}
+vec3 GetNormal(in const ivec2 coord) 
+{
+	return oct_to_float32x3( texelFetch(uNormal, ivec3(coord, 0), 0).rg );
+}
+
+float GetBilateralWeight(in const vec3 normal, in const vec3 samp_normal, in const vec3 position, in const vec3 samp_position)
+{
+	const float kKNormal = 40.0f, kKPlane = 0.05f;
+	const float kLowDistanceThreshold2 = 0.01f;
+
+	float normal_error = (1.0f - dot(normal, samp_normal)) * kKNormal;
+	float normal_weight = max(1.0 - EDGE_SHARPNESS * normal_error, 0.0f);
+
+	vec3 dq = position - samp_position;
+	float dist2 = dot(dq, dq);
+
+	float plane_error = max( abs(dot(dq, samp_normal)), abs(dot(dq, normal)) );
+
+	float plane_weight = (dist2 < kLowDistanceThreshold2) ? 1.0f : 
+		pow( max(0.0f, 1.0f - EDGE_SHARPNESS * 2.0f * kKPlane * plane_error / sqrt(dist2)), 2.0f );
+
+	return normal_weight * plane_weight;
+}
 
 void main()
 {
-	vec2 texel_size = vec2(1.0f) / vec2(textureSize(uGIRadiance, 0));
-	vec3 color = vec3(0.0f);
+	ivec2 frag_coord = ivec2(gl_FragCoord.xy);
 
-	/*vec2 off1 = vec2(1.3846153846) * uDirection;
-	vec2 off2 = vec2(3.2307692308) * uDirection;
-	color += texture(uGIRadiance, vTexcoords).xyz * 0.2270270270;
-	color += texture(uGIRadiance, vTexcoords + (off1 * texel_size)).xyz * 0.3162162162;
-	color += texture(uGIRadiance, vTexcoords - (off1 * texel_size)).xyz * 0.3162162162;
-	color += texture(uGIRadiance, vTexcoords + (off2 * texel_size)).xyz * 0.0702702703;
-	color += texture(uGIRadiance, vTexcoords - (off2 * texel_size)).xyz * 0.0702702703;*/
+	vec3 samp = texelFetch(uGIRadiance, frag_coord, 0).rgb;
 
-	vec2 off1 = vec2(1.411764705882353) * uDirection;
-	vec2 off2 = vec2(3.2941176470588234) * uDirection;
-	vec2 off3 = vec2(5.176470588235294) * uDirection;
-	color += texture2D(uGIRadiance, vTexcoords).xyz * 0.1964825501511404;
-	color += texture2D(uGIRadiance, vTexcoords + (off1 * texel_size)).xyz * 0.2969069646728344;
-	color += texture2D(uGIRadiance, vTexcoords - (off1 * texel_size)).xyz * 0.2969069646728344;
-	color += texture2D(uGIRadiance, vTexcoords + (off2 * texel_size)).xyz * 0.09447039785044732;
-	color += texture2D(uGIRadiance, vTexcoords - (off2 * texel_size)).xyz * 0.09447039785044732;
-	color += texture2D(uGIRadiance, vTexcoords + (off3 * texel_size)).xyz * 0.010381362401148057;
-	color += texture2D(uGIRadiance, vTexcoords - (off3 * texel_size)).xyz * 0.010381362401148057;
+	vec3 sum = samp * kKernel[0];
+	float total_weight = kKernel[0];
+	float depth = GetDepth(frag_coord);
+	vec3 normal = GetNormal(frag_coord);
+	vec3 position = ReconstructPosition(frag_coord, depth);
 
-	/*vec2 off1 = vec2(1.3333333333333333) * uDirection;
-	  color += texture(uGIRadiance, vTexcoords) * 0.29411764705882354;
-	  color += texture(uGIRadiance, vTexcoords + (off1 * texel_size)) * 0.35294117647058826;
-	  color += texture(uGIRadiance, vTexcoords - (off1 * texel_size)) * 0.35294117647058826;*/
+	float last_bilateral_weight = 9999.0;
+	for(int r = -R; r <= R; ++r)
+	{
+		if(r == 0) continue;
 
-	oBlured = color;
+		ivec2 samp_coord = frag_coord + uDirection * (r * SCALE);
+		samp = texelFetch(uGIRadiance, samp_coord, 0).rgb;
+		float samp_depth = GetDepth(samp_coord);
+		vec3 samp_normal = GetNormal(samp_coord);
+		vec3 samp_position = ReconstructPosition(frag_coord, samp_depth);
+
+		// spatial domain: offset kKernel tap
+		float weight = 0.3 + kKernel[abs(r)];
+
+		// range domain (the "bilateral" weight). As depth difference increases, decrease weight.
+		float bilateral_weight = GetBilateralWeight(normal, samp_normal, position, samp_position);
+
+		bilateral_weight = min(last_bilateral_weight, bilateral_weight);
+		last_bilateral_weight = bilateral_weight;
+		weight *= bilateral_weight;
+		sum += samp * weight;
+		total_weight += weight;
+	}
+
+	oBlured = sum / (total_weight + 0.0001f);
 }

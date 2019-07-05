@@ -43,7 +43,7 @@ private:
 	mygl3::FrameBuffer m_blur_fbo[2];
 public:
 	void Initialize(const GIRenderer &renderer);
-	void Blur(const ScreenQuad &quad);
+	void Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer);
 };
 
 

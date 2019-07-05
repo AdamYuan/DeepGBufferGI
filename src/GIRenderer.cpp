@@ -104,16 +104,19 @@ void GIBlurer::Initialize(const GIRenderer &renderer)
 	m_blur_fbo[1].AttachTexture(*m_target, GL_COLOR_ATTACHMENT0);
 }
 
-void GIBlurer::Blur(const ScreenQuad &quad)
+void GIBlurer::Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer)
 {
-	constexpr GLfloat dir0[] = {1.0f, 0.0f}, dir1[] = {0.0f, 1.0f};
+	constexpr GLint dir0[] = {1, 0}, dir1[] = {0, 1};
 	m_shader.Use();
+
+	gbuffer.GetNormal().Bind(kNormalSampler2DArray);
+	gbuffer.GetDepth().Bind(kDepthSampler2DArray);
 
 	m_blur_fbo[0].Bind();
 	glViewport(0, 0, kWidth, kHeight);
 	glClear(GL_COLOR_BUFFER_BIT);
 	m_target->Bind(kGIRadianceSampler2D);
-	m_shader.SetVec2(m_unif_direction, dir0);
+	m_shader.SetIVec2(m_unif_direction, dir0);
 	quad.Render();
 	mygl3::FrameBuffer::Unbind();
 
@@ -121,7 +124,7 @@ void GIBlurer::Blur(const ScreenQuad &quad)
 	glViewport(0, 0, kWidth, kHeight);
 	glClear(GL_COLOR_BUFFER_BIT);
 	m_tmp_texture.Bind(kGIRadianceSampler2D);
-	m_shader.SetVec2(m_unif_direction, dir1);
+	m_shader.SetIVec2(m_unif_direction, dir1);
 	quad.Render();
 	mygl3::FrameBuffer::Unbind();
 }

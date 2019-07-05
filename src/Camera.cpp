@@ -70,6 +70,6 @@ void Camera::Update()
 	//set values
 	m_ubo_ptr->m_projection = m_projection;
 	m_ubo_ptr->m_view = m_view;
-	m_ubo_ptr->m_position = glm::vec4(m_position, 1.0f);
+	m_ubo_ptr->m_inv_pv = glm::inverse(m_projection * m_view);
 }
 

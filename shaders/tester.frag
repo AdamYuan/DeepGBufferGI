@@ -5,13 +5,16 @@
 
 #ifdef TEST_RADIOSITY
 out vec4 oColor;
+layout (binding = 3) uniform sampler2DArray uAlbedo;
 layout (binding = 6) uniform sampler2DArray uRadiance;
 layout (binding = 7) uniform sampler2D uGIRadiance;
 in vec2 vTexcoords;
 
 void main()
 {
-	vec3 color = texture(uRadiance, vec3(vTexcoords, 0)).rgb + texture(uGIRadiance, vTexcoords).rgb;
+	ivec2 coord = ivec2(gl_FragCoord.xy);
+	vec3 color = texelFetch(uRadiance, ivec3(coord, 0), 0).rgb 
+		+ texelFetch(uGIRadiance, coord, 0).rgb * texelFetch(uAlbedo, ivec3(coord, 0), 0).rgb;
 	oColor = vec4(pow(color, vec3(1.0f / 2.2f)) , 1);
 }
 #endif

@@ -25,7 +25,7 @@ private:
 	{
 		glm::mat4 m_projection;
 		glm::mat4 m_view;
-		glm::vec4 m_position;
+		glm::mat4 m_inv_pv;
 	} *m_ubo_ptr;
 	mygl3::Buffer m_ubo;
 	void move_forward(float dist, float dir) //degrees

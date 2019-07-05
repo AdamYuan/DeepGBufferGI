@@ -6,7 +6,7 @@ layout(std140, binding = 1) uniform uuCamera
 {
 	mat4 uProjection;
 	mat4 uView;
-	vec4 uPosition;
+	mat4 uInvPV;
 };
 
 layout (binding = 3) uniform sampler2DArray uAlbedo;
@@ -21,7 +21,7 @@ in vec2 vTexcoords;
 out vec3 oRadiance;
 
 #if PERFORMANCE_MODE == 0
-const int kN = 13;
+const int kN = 13; //sample count
 const int kMinMip = 3;
 #elif PERFORMANCE_MODE == 1
 const int kN = 14;
@@ -34,7 +34,7 @@ const int kMaxMip = 5;
 
 const float kR = 0.25f; //world space sample radius
 const float kR2 = kR * kR;
-const float kQ = 64; //screen space radius which we first increase mip-level
+const float kQ = 32; //screen space radius which we first increase mip-level
 const float kInvN = 1.0f / float(kN);
 const float kTwoPi = 6.283185307179586f;
 // tau[N-1] = optimal number of spiral turns for N samples
@@ -52,7 +52,7 @@ float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + 
 vec3 ReconstructPosition(in const vec2 texcoords, in float depth)
 {
 	vec4 clip = vec4(texcoords * 2.0f - 1.0f, depth * 2.0f - 1.0f, 1.0f);
-	vec4 rec = inverse(uProjection * uView) * clip;
+	vec4 rec = uInvPV * clip;
 	return rec.xyz / rec.w;
 }
 
@@ -73,12 +73,11 @@ void GetPositionNormal(in const ivec3 coord, in const int mip, out vec3 position
 	position = ReconstructPosition(vec2(coord.xy) / vec2(uResolution), depth);
 	normal = oct_to_float32x3( texelFetch(uNormal, coord_mip, mip).rg );
 }
-void GetPositionNormalDepthAlbedoRadiance(in const ivec3 coord, out vec3 position, out vec3 normal, inout float depth, out vec3 albedo, out vec3 radiance)
+void GetPositionNormalDepthRadiance(in const ivec3 coord, out vec3 position, out vec3 normal, inout float depth, out vec3 radiance)
 {
 	depth = texelFetch(uDepth, coord, 0).r;
 	position = ReconstructPosition(vec2(coord.xy) / vec2(uResolution), depth);
 	normal = oct_to_float32x3( texelFetch(uNormal, coord, 0).rg );
-	albedo = texelFetch(uAlbedo, coord, 0).rgb;
 	radiance = texelFetch(uRadiance, coord, 0).rgb;
 }
 
@@ -89,7 +88,7 @@ vec3 GetRadiance(in const ivec3 coord, in const int mip)
 }
 
 void GetSampleLocationAndMip(in const int sample_index, in const float radius, 
-							 in const float random_rotation, in const float radial_jitter, out ivec2 loc, inout int mip)
+							 in const float random_rotation, in const float radial_jitter, out ivec2 loc, out int mip)
 {
 	float k = (float(sample_index) + radial_jitter) * kInvN;
 	float theta = kTwoPi * tau[kN - 1] * k + random_rotation;
@@ -97,8 +96,7 @@ void GetSampleLocationAndMip(in const int sample_index, in const float radius,
 	vec2 u = vec2(cos(theta), sin(theta));
 	loc = ivec2(u * h);
 
-	mip = int(floor(log2(h / kQ)));
-	mip = clamp(mip, kMinMip, kMaxMip);
+	mip = clamp(findMSB(int(h)), kMinMip, kMaxMip);
 }
 
 void GetSampleWeight(in const vec3 x_position, in const vec3 x_normal, in const vec3 y_position, in const vec3 y_normal, inout int weight, inout vec3 omega)
@@ -130,9 +128,9 @@ void main()
 	ivec2 frag_coord = ivec2(gl_FragCoord.xy);
 	ivec3 x_coord = ivec3(frag_coord, 0);
 
-	vec3 x_position, x_normal, x_radiance, x_albedo;
+	vec3 x_position, x_normal, x_radiance;
 	float x_depth;
-	GetPositionNormalDepthAlbedoRadiance(x_coord, x_position, x_normal, x_depth, x_albedo, x_radiance);
+	GetPositionNormalDepthRadiance(x_coord, x_position, x_normal, x_depth, x_radiance);
 
 	int sample_used = 0;
 	vec3 radiance_sum = vec3(0);
@@ -148,24 +146,24 @@ void main()
 		ivec2 samp_coord = frag_coord + relative_loc;
 		if(samp_coord.xy != clamp(samp_coord.xy, ivec2(0), uResolution - 1)) continue; //skip out of range part
 
-		ivec3 y_coord			= ivec3(samp_coord, 0);
-		ivec3 y_coord_peeled	= ivec3(samp_coord, 1);
+		ivec3 y_coord        = ivec3(samp_coord, 0);
+		ivec3 y_coord_peeled = ivec3(samp_coord, 1);
 
-		vec3 y_position,		y_normal;
-		vec3 y_position_peeled,	y_normal_peeled;
+		vec3 y_position,        y_normal;
+		vec3 y_position_peeled, y_normal_peeled;
 
-		GetPositionNormal(y_coord,			mip, y_position,		y_normal		);
-		GetPositionNormal(y_coord_peeled,	mip, y_position_peeled,	y_normal_peeled	);
+		GetPositionNormal(y_coord,        mip, y_position,        y_normal       );
+		GetPositionNormal(y_coord_peeled, mip, y_position_peeled, y_normal_peeled);
 
 		int  y_weight,  y_weight_peeled;
 		vec3 y_omega,   y_omega_peeled;
 
-		GetSampleWeight(x_position, x_normal, y_position,			y_normal,			y_weight,			y_omega);
-		GetSampleWeight(x_position, x_normal, y_position_peeled,	y_normal_peeled,	y_weight_peeled,	y_omega_peeled);
+		GetSampleWeight(x_position, x_normal, y_position,        y_normal,        y_weight,        y_omega);
+		GetSampleWeight(x_position, x_normal, y_position_peeled, y_normal_peeled, y_weight_peeled, y_omega_peeled);
 
 		if(y_weight        == 1) AcculumateRadiance(dot(x_normal, y_omega)       , y_coord,        mip, sample_used, radiance_sum);
 		if(y_weight_peeled == 1) AcculumateRadiance(dot(x_normal, y_omega_peeled), y_coord_peeled, mip, sample_used, radiance_sum);
 	}
 	radiance_sum *= kTwoPi / (float(sample_used) + 1e-4f);
-	oRadiance = radiance_sum * x_albedo;
+	oRadiance = radiance_sum;
 }

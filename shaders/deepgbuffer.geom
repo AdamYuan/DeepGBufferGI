@@ -18,7 +18,7 @@ layout(std140, binding = 1) uniform uuCamera
 {
 	mat4 uProjection;
 	mat4 uView;
-	vec4 uPosition;
+	mat4 uInvPV;
 };
 
 uniform mat4 uLastView;
