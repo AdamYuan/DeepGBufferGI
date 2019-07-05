@@ -24,7 +24,7 @@ private:
 	mygl3::FrameBuffer m_direct_light_fbo, m_radiosity_fbo;
 	mygl3::Shader m_direct_light_shader, m_radiosity_shader;
 	GLint m_direct_light_unif_shadow_transform, m_direct_light_unif_light_dir;
-	GLint m_radiosity_unif_time;
+	GLint m_radiosity_unif_time, m_radiosity_unif_resolution;
 public:
 	void Initialize();
 	void DirectLight(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer, const ShadowMap &shadowmap);

@@ -10,13 +10,13 @@
 void DeepGBuffer::Initialize()
 {
 	m_albedo.Initialize();
-	m_albedo.Storage(kWidth, kHeight, 2, GL_RGB8);
+	m_albedo.Storage(kWidth, kHeight, 2, GL_RGB8, 1);
 	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 	m_normal.Initialize();
-	m_normal.Storage(kWidth, kHeight, 2, GL_RG8_SNORM);
+	m_normal.Storage(kWidth, kHeight, 2, GL_RG8_SNORM, kMaxMip);
 	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 	m_depth.Initialize();
-	m_depth.Storage(kWidth, kHeight, 2, GL_DEPTH_COMPONENT32);
+	m_depth.Storage(kWidth, kHeight, 2, GL_DEPTH_COMPONENT32, kMaxMip);
 	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
 	m_last_depth.Initialize();
@@ -64,4 +64,6 @@ void DeepGBuffer::Update(const Scene &scene, const Camera &camera)
 	mygl3::FrameBuffer::Unbind();
 
 	last_view_mat = camera.m_view;
+	m_normal.GenerateMipmap();
+	m_depth.GenerateMipmap();
 }

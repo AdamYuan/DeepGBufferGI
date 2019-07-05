@@ -87,7 +87,7 @@ void Application::Run()
 		m_gbuffer.Update(m_scene, m_camera);
 		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
 		m_renderer.Radiosity(m_quad, m_camera, m_gbuffer);
-		m_gi_blurer.Blur(m_quad);
+		//m_gi_blurer.Blur(m_quad);
 
 		m_renderer.GetRadiance().Bind(kRadianceSampler2DArray);
 		m_renderer.GetGIRadiance().Bind(kGIRadianceSampler2D);

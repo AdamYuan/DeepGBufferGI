@@ -12,7 +12,7 @@
 void GIRenderer::Initialize()
 {
 	m_radiance.Initialize();
-	m_radiance.Storage(kWidth, kHeight, 2, GL_R11F_G11F_B10F, mygl3::Texture2DArray::GetLevelCount(kWidth, kHeight));
+	m_radiance.Storage(kWidth, kHeight, 2, GL_R11F_G11F_B10F, kMaxMip);
 	m_radiance.SetSizeFilter(GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
 	m_radiance.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
@@ -36,6 +36,7 @@ void GIRenderer::Initialize()
 	m_radiosity_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_radiosity_shader.LoadFromFile("shaders/radiosity.frag", GL_FRAGMENT_SHADER);
 	m_radiosity_unif_time = m_radiosity_shader.GetUniform("uTime");
+	m_radiosity_unif_resolution = m_radiosity_shader.GetUniform("uResolution");
 }
 
 void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer, const ShadowMap &shadowmap)
@@ -62,6 +63,7 @@ void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const
 
 void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer)
 {
+	constexpr GLint kResolution[] = {kWidth, kHeight};
 	m_radiosity_fbo.Bind();
 
 	glViewport(0, 0, kWidth, kHeight);
@@ -75,6 +77,7 @@ void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const D
 
 	m_radiosity_shader.Use();
 	m_radiosity_shader.SetFloat(m_radiosity_unif_time, glfwGetTime());
+	m_radiosity_shader.SetIVec2(m_radiosity_unif_resolution, kResolution);
 	quad.Render();
 
 	mygl3::FrameBuffer::Unbind();
