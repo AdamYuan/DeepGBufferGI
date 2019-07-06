@@ -30,7 +30,7 @@ layout(std140, binding = 1) uniform uuCamera
 };
 layout (binding = 4) uniform sampler2DArray uNormal;
 layout (binding = 5) uniform sampler2DArray uDepth;
-layout (binding = 7) uniform sampler2D uGIRadiance;
+layout (binding = 7) uniform sampler2D uOutputRadiance;
 uniform ivec2 uDirection; //(1, 0) or (0, 1)
 uniform ivec2 uResolution;
 out vec3 oBlured;
@@ -83,7 +83,7 @@ void main()
 {
 	ivec2 frag_coord = ivec2(gl_FragCoord.xy);
 
-	vec3 samp = texelFetch(uGIRadiance, frag_coord, 0).rgb;
+	vec3 samp = texelFetch(uOutputRadiance, frag_coord, 0).rgb;
 
 	vec3 sum = samp * kKernel[0];
 	float total_weight = kKernel[0];
@@ -96,7 +96,7 @@ void main()
 		if(r == 0) continue;
 
 		ivec2 samp_coord = frag_coord + uDirection * (r * SCALE);
-		samp = texelFetch(uGIRadiance, samp_coord, 0).rgb;
+		samp = texelFetch(uOutputRadiance, samp_coord, 0).rgb;
 		float samp_depth = GetDepth(samp_coord);
 		vec3 samp_normal = GetNormal(samp_coord);
 		vec3 samp_position = ReconstructPosition(frag_coord, samp_depth);

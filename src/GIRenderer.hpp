@@ -14,12 +14,12 @@
 class GIRenderer
 {
 private:
-	mygl3::Texture2DArray m_radiance; //GL_R11F_G11F_B10F
-	mygl3::Texture2D m_gi_radiance;
-	//1. use direct light shader to emmit m_radiance (2 layers),
+	mygl3::Texture2DArray m_input_radiance; //GL_R11F_G11F_B10F
+	mygl3::Texture2D m_output_radiance;
+	//1. use direct light shader to emmit m_input_radiance (2 layers),
 	//   also combine the first layer with last radiosity result to do multi-bounce radiosity
-	//2. use m_radiance to calculate radiosity and store it in m_gi_radiance (the first layer)
-	//3. apply bilateral filter to m_gi_radiance (use the second layer of m_radiance as tmp texture)
+	//2. use m_input_radiance to calculate radiosity and store it in m_output_radiance (the first layer)
+	//3. apply bilateral filter to m_output_radiance (use the second layer of m_input_radiance as tmp texture)
 	//4. apply temporal filter (store last radiosity result in another texture)
 
 	mygl3::FrameBuffer m_direct_light_fbo, m_radiosity_fbo;
@@ -30,8 +30,8 @@ public:
 	void Initialize();
 	void DirectLight(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer, const ShadowMap &shadowmap);
 	void Radiosity(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer);
-	const mygl3::Texture2DArray &GetRadiance() const { return m_radiance; }
-	const mygl3::Texture2D &GetGIRadiance() const { return m_gi_radiance; }
+	const mygl3::Texture2DArray &GetInputRadiance() const { return m_input_radiance; }
+	const mygl3::Texture2D &GetOutputRadiance() const { return m_output_radiance; }
 };
 
 class GIBlurer
@@ -50,15 +50,18 @@ public:
 class GITemporalFilter
 {
 private:
-	mygl3::Texture2D m_last_texture; //store last radiosity result
+	mygl3::Texture2D m_reprojected_texture; //store reprojected last radiosity result
 	mygl3::Texture2D m_tmp_texture; //do filter on this tmp texture
 	const mygl3::Texture2D *m_target;
-	mygl3::Shader m_shader;
-	GLint m_unif_last_view;
-	mygl3::FrameBuffer m_fbo;
+	mygl3::Shader m_reproject_shader, m_blend_shader;
+	GLint m_reproject_unif_last_view;
+	mygl3::FrameBuffer m_reproject_fbo, m_blend_fbo;
 public:
 	void Initialize(const GIRenderer &renderer);
-	void Filter(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer);
+	void Reproject(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer);
+	//reproject last frame's radiosity result to m_reprojected_texture
+	void Blend(const ScreenQuad &quad);
+	//blend this frame's result with m_reprojected_texture
 };
 
 

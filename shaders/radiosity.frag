@@ -12,7 +12,7 @@ layout(std140, binding = 1) uniform uuCamera
 layout (binding = 3) uniform sampler2DArray uAlbedo;
 layout (binding = 4) uniform sampler2DArray uNormal;
 layout (binding = 5) uniform sampler2DArray uDepth;
-layout (binding = 6) uniform sampler2DArray uRadiance; //input radiance
+layout (binding = 6) uniform sampler2DArray uInputRadiance; //input radiance
 
 uniform float uTime;
 uniform ivec2 uResolution;
@@ -78,13 +78,13 @@ void GetPositionNormalDepthRadiance(in const ivec3 coord, out vec3 position, out
 	depth = texelFetch(uDepth, coord, 0).r;
 	position = ReconstructPosition(vec2(coord.xy) / vec2(uResolution), depth);
 	normal = oct_to_float32x3( texelFetch(uNormal, coord, 0).rg );
-	radiance = texelFetch(uRadiance, coord, 0).rgb;
+	radiance = texelFetch(uInputRadiance, coord, 0).rgb;
 }
 
 vec3 GetRadiance(in const ivec3 coord, in const int mip)
 {
 	ivec3 coord_mip = ivec3(coord.xy >> mip, coord.z);
-	return texelFetch(uRadiance, coord_mip, mip).rgb;
+	return texelFetch(uInputRadiance, coord_mip, mip).rgb;
 }
 
 void GetSampleLocationAndMip(in const int sample_index, in const float radius, 

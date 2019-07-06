@@ -8,13 +8,12 @@ layout(std140, binding = 1) uniform uuCamera
 	mat4 uInvPV;
 };
 layout (binding = 5) uniform sampler2DArray uDepth;
-layout (binding = 7) uniform sampler2D uGIRadiance;
-layout (binding = 8) uniform sampler2D uLastGIRadiance;
+layout (binding = 7) uniform sampler2D uOutputRadiance;
 
 uniform mat4 uLastView;
-out vec3 oFiltered;
+out vec3 oReprojected;
 
-vec2 Relocate(in const vec2 texcoords, in const float depth)
+vec2 Reproject(in const vec2 texcoords, in const float depth)
 {
 	vec4 clip = vec4(texcoords * 2.0f - 1.0f, depth * 2.0f - 1.0f, 1.0f);
 	vec4 rec = uInvPV * clip;
@@ -42,21 +41,20 @@ void main()
 {
 	ivec2 frag_coord = ivec2(gl_FragCoord.xy);
 	float depth = texelFetch(uDepth, ivec3(frag_coord, 0), 0).r;
-	vec2 last_texcoords = Relocate(vTexcoords, depth);
+	vec2 last_texcoords = Reproject(vTexcoords, depth);
 
 	/*vec3 samp, aabb_min, aabb_max, color_in;
-	color_in = aabb_max = aabb_min = texelFetch(uGIRadiance, frag_coord, 0).rgb;
+	color_in = aabb_max = aabb_min = texelFetch(uOutputRadiance, frag_coord, 0).rgb;
 
-	samp = texelFetch(uGIRadiance, ivec2(frag_coord.x - 1, frag_coord.y), 0).rgb;
+	samp = texelFetch(uOutputRadiance, ivec2(frag_coord.x - 1, frag_coord.y), 0).rgb;
 	aabb_min = min(aabb_min, samp); aabb_max = max(aabb_max, samp);
-	samp = texelFetch(uGIRadiance, ivec2(frag_coord.x + 1, frag_coord.y), 0).rgb;
+	samp = texelFetch(uOutputRadiance, ivec2(frag_coord.x + 1, frag_coord.y), 0).rgb;
 	aabb_min = min(aabb_min, samp); aabb_max = max(aabb_max, samp);
-	samp = texelFetch(uGIRadiance, ivec2(frag_coord.x, frag_coord.y - 1), 0).rgb;
+	samp = texelFetch(uOutputRadiance, ivec2(frag_coord.x, frag_coord.y - 1), 0).rgb;
 	aabb_min = min(aabb_min, samp); aabb_max = max(aabb_max, samp);
-	samp = texelFetch(uGIRadiance, ivec2(frag_coord.x, frag_coord.y + 1), 0).rgb;
+	samp = texelFetch(uOutputRadiance, ivec2(frag_coord.x, frag_coord.y + 1), 0).rgb;
 	aabb_min = min(aabb_min, samp); aabb_max = max(aabb_max, samp);*/
 
-	vec3 color_in = texelFetch(uGIRadiance, frag_coord, 0).rgb;
-	vec3 color_hist = texture(uLastGIRadiance, last_texcoords).rgb;
-	oFiltered = color_hist * 0.85 + color_in * 0.15;//ClipAABB(aabb_min, aabb_max, color_in, color_hist);
+	vec3 color_hist = texture(uOutputRadiance, last_texcoords).rgb;
+	oReprojected = color_hist;
 }

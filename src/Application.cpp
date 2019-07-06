@@ -86,14 +86,16 @@ void Application::Run()
 		glfwSetWindowTitle(m_window, title);
 
 		m_gbuffer.Update(m_scene, m_camera);
+		m_gi_temporal.Reproject(m_quad, m_camera, m_gbuffer);
+
 		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
 		m_renderer.Radiosity(m_quad, m_camera, m_gbuffer);
 		m_gi_blurer.Blur(m_quad, m_gbuffer);
-		m_gi_temporal.Filter(m_quad, m_camera, m_gbuffer);
+		m_gi_temporal.Blend(m_quad);
 
 		m_gbuffer.GetAlbedo().Bind(kAlbedoSampler2DArray);
-		m_renderer.GetRadiance().Bind(kRadianceSampler2DArray);
-		m_renderer.GetGIRadiance().Bind(kGIRadianceSampler2D);
+		m_renderer.GetInputRadiance().Bind(kInputRadianceSampler2DArray);
+		m_renderer.GetOutputRadiance().Bind(kOutputRadianceSampler2D);
 		//m_shadowmap.GetTexture().Bind(2);
 		m_tester.Use();
 		m_quad.Render();

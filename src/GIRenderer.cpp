@@ -11,19 +11,21 @@
 
 void GIRenderer::Initialize()
 {
-	m_radiance.Initialize();
-	m_radiance.Storage(kWidth, kHeight, 2, GL_R11F_G11F_B10F, kMaxMip);
-	m_radiance.SetSizeFilter(GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
-	m_radiance.SetWrapFilter(GL_CLAMP_TO_BORDER);
+	m_input_radiance.Initialize();
+	m_input_radiance.Storage(kWidth, kHeight, 2, GL_R11F_G11F_B10F, kMaxMip);
+	m_input_radiance.SetSizeFilter(GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
+	m_input_radiance.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
-	m_gi_radiance.Initialize();
-	m_gi_radiance.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
+	m_output_radiance.Initialize();
+	m_output_radiance.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
+	m_output_radiance.SetSizeFilter(GL_LINEAR, GL_LINEAR); //for temporal filtering
+	m_output_radiance.SetWrapFilter(GL_CLAMP_TO_EDGE);
 
 	m_direct_light_fbo.Initialize();
-	m_direct_light_fbo.AttachTexture(m_radiance, GL_COLOR_ATTACHMENT0);
+	m_direct_light_fbo.AttachTexture(m_input_radiance, GL_COLOR_ATTACHMENT0);
 
 	m_radiosity_fbo.Initialize();
-	m_radiosity_fbo.AttachTexture(m_gi_radiance, GL_COLOR_ATTACHMENT0);
+	m_radiosity_fbo.AttachTexture(m_output_radiance, GL_COLOR_ATTACHMENT0);
 
 	m_direct_light_shader.Initialize();
 	m_direct_light_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
@@ -60,7 +62,7 @@ void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const
 
 	mygl3::FrameBuffer::Unbind();
 
-	m_radiance.GenerateMipmap();
+	m_input_radiance.GenerateMipmap();
 }
 
 void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer)
@@ -74,7 +76,7 @@ void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const D
 	gbuffer.GetAlbedo().Bind(kAlbedoSampler2DArray);
 	gbuffer.GetNormal().Bind(kNormalSampler2DArray);
 	gbuffer.GetDepth().Bind(kDepthSampler2DArray);
-	m_radiance.Bind(kRadianceSampler2DArray);
+	m_input_radiance.Bind(kInputRadianceSampler2DArray);
 
 	m_radiosity_shader.Use();
 	m_radiosity_shader.SetFloat(m_radiosity_unif_time, glfwGetTime() * 1000.0f);
@@ -86,12 +88,12 @@ void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const D
 void GIBlurer::Initialize(const GIRenderer &renderer)
 {
 	m_tmp_texture.InitializeWithoutTarget();
-	glTextureView(m_tmp_texture.Get(), GL_TEXTURE_2D, renderer.GetRadiance().Get(), GL_R11F_G11F_B10F, 0, 1, 1, 1);
-	//use the second layer of m_radiance as tmp texture
+	glTextureView(m_tmp_texture.Get(), GL_TEXTURE_2D, renderer.GetInputRadiance().Get(), GL_R11F_G11F_B10F, 0, 1, 1, 1);
+	//use the second layer of m_input_radiance as tmp texture
 	m_tmp_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
 	m_tmp_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
 
-	m_target = &renderer.GetGIRadiance();
+	m_target = &renderer.GetOutputRadiance();
 
 	m_shader.Initialize();
 	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
@@ -118,7 +120,7 @@ void GIBlurer::Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer)
 	m_blur_fbo[0].Bind();
 	glViewport(0, 0, kWidth, kHeight);
 	glClear(GL_COLOR_BUFFER_BIT);
-	m_target->Bind(kGIRadianceSampler2D);
+	m_target->Bind(kOutputRadianceSampler2D);
 	m_shader.SetIVec2(m_unif_direction, dir0);
 	quad.Render();
 	mygl3::FrameBuffer::Unbind();
@@ -126,7 +128,7 @@ void GIBlurer::Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer)
 	m_blur_fbo[1].Bind();
 	glViewport(0, 0, kWidth, kHeight);
 	glClear(GL_COLOR_BUFFER_BIT);
-	m_tmp_texture.Bind(kGIRadianceSampler2D);
+	m_tmp_texture.Bind(kOutputRadianceSampler2D);
 	m_shader.SetIVec2(m_unif_direction, dir1);
 	quad.Render();
 	mygl3::FrameBuffer::Unbind();
@@ -134,41 +136,48 @@ void GIBlurer::Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer)
 
 void GITemporalFilter::Initialize(const GIRenderer &renderer)
 {
-	m_last_texture.Initialize();
-	m_last_texture.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
-	m_last_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
-	m_last_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
+	m_reprojected_texture.Initialize();
+	m_reprojected_texture.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
+	m_reprojected_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
+	m_reprojected_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
 
 	m_tmp_texture.InitializeWithoutTarget();
-	glTextureView(m_tmp_texture.Get(), GL_TEXTURE_2D, renderer.GetRadiance().Get(), GL_R11F_G11F_B10F, 0, 1, 1, 1);
-	//use the second layer of m_radiance as tmp texture
+	glTextureView(m_tmp_texture.Get(), GL_TEXTURE_2D, renderer.GetInputRadiance().Get(), GL_R11F_G11F_B10F, 0, 1, 1, 1);
+	//use the second layer of m_input_radiance as tmp texture
 	//m_tmp_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
 	//m_tmp_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
 
-	m_target = &renderer.GetGIRadiance();
+	m_target = &renderer.GetOutputRadiance();
 
-	m_shader.Initialize();
-	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
-	m_shader.LoadFromFile("shaders/radiosity_temporal.frag", GL_FRAGMENT_SHADER);
-	m_unif_last_view = m_shader.GetUniform("uLastView");
+	m_reproject_shader.Initialize();
+	m_reproject_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_reproject_shader.LoadFromFile("shaders/radiosity_temporal_reproject.frag", GL_FRAGMENT_SHADER);
+	m_reproject_unif_last_view = m_reproject_shader.GetUniform("uLastView");
 
-	m_fbo.Initialize();
-	m_fbo.AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
+	m_reproject_fbo.Initialize();
+	m_reproject_fbo.AttachTexture(m_reprojected_texture, GL_COLOR_ATTACHMENT0);
+
+	m_blend_shader.Initialize();
+	m_blend_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_blend_shader.LoadFromFile("shaders/radiosity_temporal_blend.frag", GL_FRAGMENT_SHADER);
+
+	m_blend_fbo.Initialize();
+	m_blend_fbo.AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
 }
 
-void GITemporalFilter::Filter(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer)
+
+void GITemporalFilter::Reproject(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer)
 {
 	static glm::mat4 last_view_mat;
 
-	m_shader.Use();
-	m_shader.SetMat4(m_unif_last_view, glm::value_ptr(last_view_mat));
+	m_reproject_shader.Use();
+	m_reproject_shader.SetMat4(m_reproject_unif_last_view, glm::value_ptr(last_view_mat));
 
 	camera.GetBuffer().BindBase(GL_UNIFORM_BUFFER, kCameraUBO);
-	m_target->Bind(kGIRadianceSampler2D);
-	m_last_texture.Bind(kLastGIRadianceSampler2D);
+	m_target->Bind(kOutputRadianceSampler2D);
 	gbuffer.GetDepth().Bind(kDepthSampler2DArray);
 
-	m_fbo.Bind();
+	m_reproject_fbo.Bind();
 
 	glViewport(0, 0, kWidth, kHeight);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -177,10 +186,23 @@ void GITemporalFilter::Filter(const ScreenQuad &quad, const Camera &camera, cons
 	mygl3::FrameBuffer::Unbind();
 
 	last_view_mat = camera.m_view;
+}
 
-	glCopyImageSubData(m_tmp_texture.Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
-					   m_last_texture.Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
-					   kWidth, kHeight, 1);
+void GITemporalFilter::Blend(const ScreenQuad &quad)
+{
+	m_blend_shader.Use();
+
+	m_target->Bind(kOutputRadianceSampler2D);
+	m_reprojected_texture.Bind(kReprojectedRadianceSampler2D);
+
+	m_blend_fbo.Bind();
+
+	glViewport(0, 0, kWidth, kHeight);
+	glClear(GL_COLOR_BUFFER_BIT);
+	quad.Render();
+
+	mygl3::FrameBuffer::Unbind();
+
 	glCopyImageSubData(m_tmp_texture.Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
 					   m_target->Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
 					   kWidth, kHeight, 1);
