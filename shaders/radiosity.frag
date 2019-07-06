@@ -32,7 +32,7 @@ const int kMinMip = 0;
 #endif
 const int kMaxMip = 5;
 
-const float kR = 0.25f; //world space sample radius
+const float kR = 0.4f; //world space sample radius
 const float kR2 = kR * kR;
 const float kQ = 32; //screen space radius which we first increase mip-level
 const float kInvN = 1.0f / float(kN);
@@ -136,7 +136,7 @@ void main()
 	vec3 radiance_sum = vec3(0);
 
 	float radius = kR * 500 / LinearDepth(x_depth * 2.0f - 1.0f); //screen space sample radius
-	float random_rotation = Hash(vTexcoords + uTime) * kTwoPi;
+    float random_rotation = (3 * frag_coord.x ^ frag_coord.y + frag_coord.x * frag_coord.y) * 10.0f + uTime;
 	float radial_jitter = fract(sin(gl_FragCoord.x * 1e2 + uTime + gl_FragCoord.y) * 1e5 + sin(gl_FragCoord.y * 1e3) * 1e3) * 0.8 + 0.1;
 
 	for(int i = 0; i < kN; ++i)

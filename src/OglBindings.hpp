@@ -16,5 +16,6 @@ constexpr GLuint kNormalSampler2DArray = 4;
 constexpr GLuint kDepthSampler2DArray = 5;
 constexpr GLuint kRadianceSampler2DArray = 6;
 constexpr GLuint kGIRadianceSampler2D = 7;
+constexpr GLuint kLastGIRadianceSampler2D = 8;
 
 #endif //SPARSEVOXELOCTREE_OGLBINDINGS_HPP

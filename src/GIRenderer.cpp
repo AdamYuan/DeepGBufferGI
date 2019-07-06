@@ -37,6 +37,8 @@ void GIRenderer::Initialize()
 	m_radiosity_shader.LoadFromFile("shaders/radiosity.frag", GL_FRAGMENT_SHADER);
 	m_radiosity_unif_time = m_radiosity_shader.GetUniform("uTime");
 	m_radiosity_unif_resolution = m_radiosity_shader.GetUniform("uResolution");
+	constexpr GLint kResolution[] = {kWidth, kHeight};
+	m_radiosity_shader.SetIVec2(m_radiosity_unif_resolution, kResolution);
 }
 
 void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer, const ShadowMap &shadowmap)
@@ -63,7 +65,6 @@ void GIRenderer::DirectLight(const ScreenQuad &quad, const Camera &camera, const
 
 void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer)
 {
-	constexpr GLint kResolution[] = {kWidth, kHeight};
 	m_radiosity_fbo.Bind();
 
 	glViewport(0, 0, kWidth, kHeight);
@@ -76,8 +77,7 @@ void GIRenderer::Radiosity(const ScreenQuad &quad, const Camera &camera, const D
 	m_radiance.Bind(kRadianceSampler2DArray);
 
 	m_radiosity_shader.Use();
-	m_radiosity_shader.SetFloat(m_radiosity_unif_time, glfwGetTime());
-	m_radiosity_shader.SetIVec2(m_radiosity_unif_resolution, kResolution);
+	m_radiosity_shader.SetFloat(m_radiosity_unif_time, glfwGetTime() * 1000.0f);
 	quad.Render();
 
 	mygl3::FrameBuffer::Unbind();
@@ -97,6 +97,9 @@ void GIBlurer::Initialize(const GIRenderer &renderer)
 	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_shader.LoadFromFile("shaders/radiosity_blur.frag", GL_FRAGMENT_SHADER);
 	m_unif_direction = m_shader.GetUniform("uDirection");
+	m_unif_resolution = m_shader.GetUniform("uResolution");
+	constexpr GLint kResolution[] = {kWidth, kHeight};
+	m_shader.SetIVec2(m_unif_resolution, kResolution);
 
 	m_blur_fbo[0].Initialize();
 	m_blur_fbo[0].AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
@@ -127,4 +130,58 @@ void GIBlurer::Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer)
 	m_shader.SetIVec2(m_unif_direction, dir1);
 	quad.Render();
 	mygl3::FrameBuffer::Unbind();
+}
+
+void GITemporalFilter::Initialize(const GIRenderer &renderer)
+{
+	m_last_texture.Initialize();
+	m_last_texture.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
+	m_last_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
+	m_last_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
+
+	m_tmp_texture.InitializeWithoutTarget();
+	glTextureView(m_tmp_texture.Get(), GL_TEXTURE_2D, renderer.GetRadiance().Get(), GL_R11F_G11F_B10F, 0, 1, 1, 1);
+	//use the second layer of m_radiance as tmp texture
+	//m_tmp_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
+	//m_tmp_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
+
+	m_target = &renderer.GetGIRadiance();
+
+	m_shader.Initialize();
+	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_shader.LoadFromFile("shaders/radiosity_temporal.frag", GL_FRAGMENT_SHADER);
+	m_unif_last_view = m_shader.GetUniform("uLastView");
+
+	m_fbo.Initialize();
+	m_fbo.AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
+}
+
+void GITemporalFilter::Filter(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer)
+{
+	static glm::mat4 last_view_mat;
+
+	m_shader.Use();
+	m_shader.SetMat4(m_unif_last_view, glm::value_ptr(last_view_mat));
+
+	camera.GetBuffer().BindBase(GL_UNIFORM_BUFFER, kCameraUBO);
+	m_target->Bind(kGIRadianceSampler2D);
+	m_last_texture.Bind(kLastGIRadianceSampler2D);
+	gbuffer.GetDepth().Bind(kDepthSampler2DArray);
+
+	m_fbo.Bind();
+
+	glViewport(0, 0, kWidth, kHeight);
+	glClear(GL_COLOR_BUFFER_BIT);
+	quad.Render();
+
+	mygl3::FrameBuffer::Unbind();
+
+	last_view_mat = camera.m_view;
+
+	glCopyImageSubData(m_tmp_texture.Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
+					   m_last_texture.Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
+					   kWidth, kHeight, 1);
+	glCopyImageSubData(m_tmp_texture.Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
+					   m_target->Get(), GL_TEXTURE_2D, 0, 0, 0, 0,
+					   kWidth, kHeight, 1);
 }

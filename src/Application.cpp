@@ -46,6 +46,7 @@ Application::Application()
 
 	m_renderer.Initialize();
 	m_gi_blurer.Initialize(m_renderer);
+	m_gi_temporal.Initialize(m_renderer);
 
 	/*m_test_texture.Initialize();
 	m_test_texture.Storage(kWidth, kHeight, GL_RGBA8);
@@ -88,6 +89,7 @@ void Application::Run()
 		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
 		m_renderer.Radiosity(m_quad, m_camera, m_gbuffer);
 		m_gi_blurer.Blur(m_quad, m_gbuffer);
+		m_gi_temporal.Filter(m_quad, m_camera, m_gbuffer);
 
 		m_gbuffer.GetAlbedo().Bind(kAlbedoSampler2DArray);
 		m_renderer.GetRadiance().Bind(kRadianceSampler2DArray);

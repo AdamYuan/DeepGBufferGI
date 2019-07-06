@@ -1,10 +1,10 @@
 //from https://casual-effects.com/research/Mara2016DeepGBuffer/
 #version 450 core
 
-#define R 4
+#define R 6
 
-#define SCALE 2
-#define EDGE_SHARPNESS 0.5f
+#define SCALE 3
+#define EDGE_SHARPNESS 1.0f
 
 //predefine kernels
 #       if R == 1 
@@ -32,11 +32,12 @@ layout (binding = 4) uniform sampler2DArray uNormal;
 layout (binding = 5) uniform sampler2DArray uDepth;
 layout (binding = 7) uniform sampler2D uGIRadiance;
 uniform ivec2 uDirection; //(1, 0) or (0, 1)
+uniform ivec2 uResolution;
 out vec3 oBlured;
 
 vec3 ReconstructPosition(in const ivec2 coord, in float depth)
 {
-	vec2 texcoords = vec2(coord) / vec2(1280, 720);
+	vec2 texcoords = vec2(coord) / vec2(uResolution);
 	vec4 clip = vec4(texcoords * 2.0f - 1.0f, depth * 2.0f - 1.0f, 1.0f);
 	vec4 rec = uInvPV * clip;
 	return rec.xyz / rec.w;
@@ -61,7 +62,7 @@ vec3 GetNormal(in const ivec2 coord)
 
 float GetBilateralWeight(in const vec3 normal, in const vec3 samp_normal, in const vec3 position, in const vec3 samp_position)
 {
-	const float kKNormal = 40.0f, kKPlane = 0.05f;
+	const float kKNormal = 40.0f, kKPlane = 5.0f;
 	const float kLowDistanceThreshold2 = 0.01f;
 
 	float normal_error = (1.0f - dot(normal, samp_normal)) * kKNormal;
@@ -107,12 +108,12 @@ void main()
 		// range domain (the "bilateral" weight). As depth difference increases, decrease weight.
 		float bilateral_weight = GetBilateralWeight(normal, samp_normal, position, samp_position);
 
-		bilateral_weight = min(last_bilateral_weight, bilateral_weight);
+		//bilateral_weight = min(last_bilateral_weight, bilateral_weight);
 		last_bilateral_weight = bilateral_weight;
 		weight *= bilateral_weight;
 		sum += samp * weight;
 		total_weight += weight;
 	}
 
-	oBlured = sum / (total_weight + 0.0001f);
+	oBlured = sum / (total_weight + 0.00001f);
 }

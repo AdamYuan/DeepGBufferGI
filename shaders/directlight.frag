@@ -22,12 +22,13 @@ in vec2 gTexcoords;
 vec3 ReconstructPosition(in const vec2 texcoords)
 {
 	vec4 clip = vec4(texcoords * 2.0f - 1.0f, texture(uDepth, vec3(texcoords, gl_Layer)).r * 2.0f - 1.0f, 1.0f);
-	vec4 rec = inverse(uProjection * uView) * clip;
+	vec4 rec = uInvPV * clip;
 	return rec.xyz / rec.w;
 }
 
 //copied from https://github.com/TheRealMJP/Shadows/blob/master/Shadows/MSM.hlsl (MIT License)
-vec4 ConvertMoments(vec4 optimized_moments) {
+vec4 ConvertMoments(vec4 optimized_moments) 
+{
 	optimized_moments[0] -= 0.0359558848;
 	const mat4 mat = mat4(0.2227744146, 0.1549679261, 0.1451988946, 0.163127443,
 						  0.0771972861, 0.1394629426, 0.2120202157, 0.2591432266,

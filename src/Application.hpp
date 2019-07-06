@@ -23,6 +23,7 @@ private:
 	ShadowMap m_shadowmap;
 	GIRenderer m_renderer;
 	GIBlurer m_gi_blurer;
+	GITemporalFilter m_gi_temporal;
 	mygl3::Framerate m_fps;
 
 	ScreenQuad m_quad;
