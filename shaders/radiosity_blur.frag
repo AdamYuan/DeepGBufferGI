@@ -91,7 +91,6 @@ void main()
 	vec3 normal = GetNormal(frag_coord);
 	vec3 position = ReconstructPosition(frag_coord, depth);
 
-	float last_bilateral_weight = 9999.0;
 	for(int r = -R; r <= R; ++r)
 	{
 		if(r == 0) continue;
@@ -108,8 +107,6 @@ void main()
 		// range domain (the "bilateral" weight). As depth difference increases, decrease weight.
 		float bilateral_weight = GetBilateralWeight(normal, samp_normal, position, samp_position);
 
-		//bilateral_weight = min(last_bilateral_weight, bilateral_weight);
-		last_bilateral_weight = bilateral_weight;
 		weight *= bilateral_weight;
 		sum += samp * weight;
 		total_weight += weight;
