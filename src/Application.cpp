@@ -14,7 +14,7 @@ Application::Application()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	m_window = glfwCreateWindow(1280, 720, "SparseVoxelOctree", nullptr, nullptr);
+	m_window = glfwCreateWindow(1280, 720, "Deep G-Buffer Global Illumination", nullptr, nullptr);
 	glfwMakeContextCurrent(m_window);
 	glfwSetWindowUserPointer(m_window, (void*)this);
 
@@ -88,8 +88,8 @@ void Application::Run()
 		m_gbuffer.Update(m_scene, m_camera);
 		m_gi_temporal.Reproject(m_quad, m_camera, m_gbuffer);
 
-		m_renderer.DirectLight(m_quad, m_camera, m_gbuffer, m_shadowmap);
-		m_renderer.Radiosity(m_quad, m_camera, m_gbuffer);
+		m_renderer.PrepareInputRadiance(m_quad, m_camera, m_gbuffer, m_shadowmap, m_gi_temporal);
+		m_renderer.SampleRadiosity(m_quad, m_camera, m_gbuffer);
 		m_gi_blurer.Blur(m_quad, m_gbuffer);
 		m_gi_temporal.Blend(m_quad);
 

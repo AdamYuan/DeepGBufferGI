@@ -1,5 +1,7 @@
 #version 450 core
 
+const float kPi = 3.141592653589793;
+
 layout(std140, binding = 1) uniform uuCamera
 {
 	mat4 uProjection;
@@ -11,6 +13,7 @@ layout (binding = 2) uniform sampler2D uShadowMap;
 layout (binding = 3) uniform sampler2DArray uAlbedo;
 layout (binding = 4) uniform sampler2DArray uNormal;
 layout (binding = 5) uniform sampler2DArray uDepth;
+layout (binding = 8) uniform sampler2D uReprojectedRadiance;
 
 layout (location = 0) out vec3 oRadiance;
 
@@ -117,5 +120,10 @@ void main()
 	vec3 albedo = texelFetch(uAlbedo, frag_coord, 0).rgb;
 	vec3 normal = oct_to_float32x3( texelFetch(uNormal, frag_coord, 0).rg );
 
-	oRadiance = max( dot(normal, -uLightDir), 0.0f ) * vec3(5, 4, 4) * SampleShadow(position) * albedo;
+	float shadow = SampleShadow(position);
+	vec3 radiance = max( dot(normal, -uLightDir), 0.0f ) * vec3(5, 4, 4) * shadow * albedo;
+	//multiple bounces
+	if(gl_Layer == 0)
+		radiance += texelFetch(uReprojectedRadiance, frag_coord.xy, 0).rgb * (1.0 - shadow) * albedo / kPi;
+	oRadiance = radiance;
 }

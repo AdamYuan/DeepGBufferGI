@@ -30,6 +30,7 @@ public:
 	const mygl3::Texture2DArray &GetNormal() const { return m_normal; }
 	const mygl3::Texture2DArray &GetAlbedo() const { return m_albedo; }
 	const mygl3::Texture2DArray &GetDepth() const { return m_depth; }
+	const mygl3::Texture2D &GetLastDepth() const { return m_last_depth; }
 };
 
 
