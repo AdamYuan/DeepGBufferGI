@@ -27,7 +27,7 @@ private:
 	mygl3::Framerate m_fps;
 
 	ScreenQuad m_quad;
-	mygl3::Shader m_tester;
+	mygl3::Shader m_final_pass_shader;
 
 	//test area
 	//mygl3::FrameBuffer m_test_fbo;

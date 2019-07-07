@@ -21,7 +21,6 @@ Application::Application()
 	gl3wInit();
 
 	m_quad.Initialize();
-
 	m_camera.Initialize();
 
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/sibenik/sibenik.obj");
@@ -33,9 +32,9 @@ Application::Application()
 	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/fireplace_room/fireplace_room.obj");
 
 	m_gbuffer.Initialize();
-	m_tester.Initialize();
-	m_tester.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
-	m_tester.LoadFromFile("shaders/tester.frag", GL_FRAGMENT_SHADER);
+	m_final_pass_shader.Initialize();
+	m_final_pass_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_final_pass_shader.LoadFromFile("shaders/finalpass.frag", GL_FRAGMENT_SHADER);
 
 	m_shadowmap.Initialize();
 	m_shadowmap.Update(m_scene, {-24.6f, 50.0f, 12.0f});
@@ -60,7 +59,7 @@ Application::Application()
 	m_test_texture.Bind(2);
 	glBindImageTexture(3, m_test_texture.Get(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
 
-	m_tester.Use();
+	m_final_pass_shader.Use();
 	m_quad.Render();
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);*/
 }
@@ -97,7 +96,7 @@ void Application::Run()
 		m_renderer.GetInputRadiance().Bind(kInputRadianceSampler2DArray);
 		m_renderer.GetOutputRadiance().Bind(kOutputRadianceSampler2D);
 		//m_shadowmap.GetTexture().Bind(2);
-		m_tester.Use();
+		m_final_pass_shader.Use();
 		m_quad.Render();
 
 		glfwSwapBuffers(m_window);

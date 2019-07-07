@@ -35,10 +35,10 @@ void main()
 
 	mat4 last_pv = uProjection * uLastView;
 	vec2 last_texcoords = ReprojectTexcoord(position, last_pv);
-	//float last_depth = texture(uLastDepth, last_texcoords).r;
-	//vec3 last_position = ReconstructPosition(last_texcoords, last_depth, inverse(last_pv));
+	float last_depth = texture(uLastDepth, last_texcoords).r;
+	vec3 last_position = ReconstructPosition(last_texcoords, last_depth, inverse(last_pv));
 
-	//vec3 dist = position - last_position;
-	//if(dot(dist, dist) < 0.00001f) 
-	oReprojected = texture(uOutputRadiance, last_texcoords).rgb;
+	vec3 dist = position - last_position;
+	if(dot(dist, dist) < 0.0001f)
+		oReprojected = texture(uOutputRadiance, last_texcoords).rgb;
 }

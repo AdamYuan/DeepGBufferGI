@@ -1,6 +1,7 @@
 #version 450 core
 
 const float kPi = 3.141592653589793;
+#define BOUNCE_BIAS 1.0
 
 layout(std140, binding = 1) uniform uuCamera
 {
@@ -122,8 +123,6 @@ void main()
 
 	float shadow = SampleShadow(position);
 	vec3 radiance = max( dot(normal, -uLightDir), 0.0f ) * vec3(5, 4, 4) * shadow * albedo;
-	//multiple bounces
-	if(gl_Layer == 0)
-		radiance += texelFetch(uReprojectedRadiance, frag_coord.xy, 0).rgb * (1.0 - shadow) * albedo / kPi;
+	if(gl_Layer == 0) radiance += texelFetch(uReprojectedRadiance, frag_coord.xy, 0).rgb * (1.0 - shadow) * albedo / BOUNCE_BIAS; //multiple bounces
 	oRadiance = radiance;
 }

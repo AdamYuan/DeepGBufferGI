@@ -12,5 +12,5 @@ void main()
 
 	vec3 color_now = texelFetch(uOutputRadiance, frag_coord, 0).rgb;
 	vec3 color_hist = texelFetch(uReprojectedRadiance, frag_coord, 0).rgb;
-	oBlended = color_now*0.15f + color_hist*0.85f;
+	oBlended = (dot(color_hist, color_hist) > 1e-9) ? color_now*0.15f + color_hist*0.85f : color_now;
 }

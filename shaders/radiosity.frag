@@ -45,8 +45,6 @@ const int tau[] = {1, 1, 2, 3, 2, 5, 2, 3, 2, 3, 3, 5, 5, 3, 4,
 	19, 29, 21, 19, 27, 31, 29, 21, 18, 17, 29, 31, 31, 23, 18, 25,
 	26, 25, 23, 19, 34, 19, 27, 21, 25, 39, 29, 17, 21, 27};
 
-float Hash(in const vec2 co) { return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453); }
-
 const float kNear = 1.0f / 512.0f, kFar = 4.0f;
 float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + kNear - depth * (kFar - kNear)); }
 vec3 ReconstructPosition(in const vec2 texcoords, in float depth)

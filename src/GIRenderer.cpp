@@ -19,7 +19,7 @@ void GIRenderer::Initialize()
 	m_output_radiance.Initialize();
 	m_output_radiance.Storage(kWidth, kHeight, GL_R11F_G11F_B10F);
 	m_output_radiance.SetSizeFilter(GL_LINEAR, GL_LINEAR); //for temporal filtering
-	m_output_radiance.SetWrapFilter(GL_CLAMP_TO_EDGE);
+	m_output_radiance.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
 	m_radiosity_input_fbo.Initialize();
 	m_radiosity_input_fbo.AttachTexture(m_input_radiance, GL_COLOR_ATTACHMENT0);
@@ -148,6 +148,7 @@ void GITemporalFilter::Initialize(const GIRenderer &renderer)
 	//use the second layer of m_input_radiance as tmp texture
 	//m_result_texture.SetSizeFilter(GL_LINEAR, GL_LINEAR);
 	//m_result_texture.SetWrapFilter(GL_CLAMP_TO_EDGE);
+
 
 	m_target = &renderer.GetOutputRadiance();
 
