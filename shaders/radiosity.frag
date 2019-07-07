@@ -32,7 +32,7 @@ const int kMinMip = 0;
 #endif
 const int kMaxMip = 5;
 
-const float kR = 0.3f; //world space sample radius
+const float kR = 0.4f; //world space sample radius
 const float kR2 = kR * kR;
 const float kQ = 32; //screen space radius which we first increase mip-level
 const float kInvN = 1.0f / float(kN);
@@ -63,7 +63,6 @@ vec3 oct_to_float32x3(vec2 e)
 	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * SignNotZero(v.xy);
 	return normalize(v);
 }
-
 void GetPositionNormal(in const ivec3 coord, in const int mip, out vec3 position, out vec3 normal)
 {
 	ivec3 coord_mip = ivec3(coord.xy >> mip, coord.z);
@@ -101,24 +100,18 @@ void GetSampleWeight(in const vec3 x_position, in const vec3 x_normal, in const 
 {
 	omega = y_position - x_position;
 #if PERFORMANCE_MODE != 0
-	weight = (dot(omega, x_normal) > 0 && dot(-omega, y_normal) > 0) ? 1 : 0;
+	weight = (dot(omega, x_normal) > 0 && dot(-omega, y_normal) > 0.01f) ? 1 : 0;
 #else
 	weight = 1;
 #endif
-	if(dot(omega, omega) > kR2)
-		weight = 0;
+	if(dot(omega, omega) > kR2) weight = 0;
 
 	omega = normalize(omega);
 }
 
-void AcculumateRadiance(in const float normal_dot_omega, in const ivec3 coord, in const int mip, inout int sample_used, inout vec3 radiance_sum)
+void CalculateRadiance(in const float normal_dot_omega, in const ivec3 coord, in const int mip, inout vec3 radiance)
 {
-	++sample_used;
-	vec3 radiance = GetRadiance(coord, mip);
-	float vmax = max(radiance.x, max(radiance.y, radiance.z));
-	float vmin = min(radiance.x, min(radiance.y, radiance.z));
-	float boost = (vmax - vmin) / max(vmax, 1e-9);
-	radiance_sum += radiance * boost * max(0.0f, normal_dot_omega);
+	radiance = GetRadiance(coord, mip) * max(0.0f, normal_dot_omega);
 }
 
 void main()
@@ -159,9 +152,21 @@ void main()
 		GetSampleWeight(x_position, x_normal, y_position,        y_normal,        y_weight,        y_omega);
 		GetSampleWeight(x_position, x_normal, y_position_peeled, y_normal_peeled, y_weight_peeled, y_omega_peeled);
 
-		if(y_weight        == 1) AcculumateRadiance(dot(x_normal, y_omega)       , y_coord,        mip, sample_used, radiance_sum);
-		if(y_weight_peeled == 1) AcculumateRadiance(dot(x_normal, y_omega_peeled), y_coord_peeled, mip, sample_used, radiance_sum);
+		vec3 y_radiance = vec3(0), y_radiance_peeled = vec3(0);
+
+		if(y_weight        == 1) CalculateRadiance(dot(x_normal, y_omega)       , y_coord,        mip, y_radiance);
+		if(y_weight_peeled == 1) CalculateRadiance(dot(x_normal, y_omega_peeled), y_coord_peeled, mip, y_radiance_peeled);
+
+		float y_adj_weight = dot(y_radiance, y_radiance) + float(y_weight);
+		float y_adj_weight_peeled = dot(y_radiance_peeled, y_radiance_peeled) + float(y_weight_peeled);
+
+		sample_used += y_adj_weight > y_adj_weight_peeled ? y_weight : y_weight_peeled;
+		radiance_sum += y_adj_weight > y_adj_weight_peeled ? y_radiance : y_radiance_peeled;
 	}
 	radiance_sum *= kTwoPi / (float(sample_used) + 1e-4f);
-	oRadiance = radiance_sum;
+
+	float vmax = max(radiance_sum.x, max(radiance_sum.y, radiance_sum.z));
+	float vmin = min(radiance_sum.x, min(radiance_sum.y, radiance_sum.z));
+	float boost = (vmax - vmin) / max(vmax, 1e-9);
+	oRadiance = radiance_sum * boost;
 }

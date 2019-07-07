@@ -13,9 +13,16 @@ in vec2 vTexcoords;
 void main()
 {
 	ivec2 coord = ivec2(gl_FragCoord.xy);
-	vec3 color = texelFetch(uInputRadiance, ivec3(coord, 0), 0).rgb 
-		+ texelFetch(uOutputRadiance, coord, 0).rgb * texelFetch(uAlbedo, ivec3(coord, 0), 0).rgb;
-	oColor = vec4(pow(color, vec3(1.0f / 2.2f)) , 1);
+	vec3 albedo = texelFetch(uAlbedo, ivec3(coord, 0), 0).rgb;
+	vec3 input_radiance = texelFetch(uInputRadiance, ivec3(coord, 0), 0).rgb;
+	vec3 output_radiance = texelFetch(uOutputRadiance, coord, 0).rgb;
+
+	vec3 final = input_radiance + output_radiance * albedo;
+
+    const float kGamma = 2.2, kExposure = 1.5f;
+    vec3 mapped = vec3(1.0) - exp(-final * kExposure);
+    mapped = pow(mapped, vec3(1.0 / kGamma));
+	oColor = vec4(mapped, 1.0f);
 }
 #endif
 

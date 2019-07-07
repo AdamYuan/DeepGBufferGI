@@ -1,7 +1,7 @@
 #version 450 core
 
 const float kPi = 3.141592653589793;
-#define BOUNCE_BIAS 1.0f
+#define BOUNCE_BIAS kPi
 
 layout(std140, binding = 1) uniform uuCamera
 {
