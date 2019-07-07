@@ -32,7 +32,7 @@ const int kMinMip = 0;
 #endif
 const int kMaxMip = 5;
 
-const float kR = 0.4f; //world space sample radius
+const float kR = 0.3f; //world space sample radius
 const float kR2 = kR * kR;
 const float kQ = 32; //screen space radius which we first increase mip-level
 const float kInvN = 1.0f / float(kN);
