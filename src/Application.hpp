@@ -21,6 +21,7 @@ private:
 	Scene m_scene;
 	DeepGBuffer m_gbuffer;
 	ShadowMap m_shadowmap;
+	ShadowMapBlurer m_shadowmap_blurer;
 	GIRenderer m_renderer;
 	GIBlurer m_gi_blurer;
 	GITemporalFilter m_gi_temporal;
@@ -32,6 +33,9 @@ private:
 	//test area
 	//mygl3::FrameBuffer m_test_fbo;
 	//mygl3::Texture2D m_test_texture;
+	glm::vec3 m_sun_position{0.0f, 10.0f, 0.0f};
+	bool m_sun_moved{true};
+	void control_sun();
 public:
 	Application();
 	~Application();

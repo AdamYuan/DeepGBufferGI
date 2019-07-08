@@ -37,11 +37,7 @@ Application::Application()
 	m_final_pass_shader.LoadFromFile("shaders/finalpass.frag", GL_FRAGMENT_SHADER);
 
 	m_shadowmap.Initialize();
-	m_shadowmap.Update(m_scene, {-24.6f, 50.0f, 12.0f});
-
-	ShadowMapBlurer shadowmap_blurer;
-	shadowmap_blurer.Initialize(m_shadowmap);
-	shadowmap_blurer.Blur(m_quad);
+	m_shadowmap_blurer.Initialize(m_shadowmap);
 
 	m_renderer.Initialize();
 	m_gi_blurer.Initialize(m_renderer);
@@ -78,6 +74,7 @@ void Application::Run()
 		glViewport(0, 0, kWidth, kHeight);
 		m_fps.Update();
 
+		control_sun();
 		m_camera.Control(m_window, m_fps);
 		m_camera.Update();
 
@@ -101,5 +98,37 @@ void Application::Run()
 
 		glfwSwapBuffers(m_window);
 		glfwPollEvents();
+	}
+}
+
+void Application::control_sun()
+{
+	float speed = m_fps.GetDelta();
+	if(glfwGetKey(m_window, GLFW_KEY_LEFT) == GLFW_PRESS)
+	{
+		m_sun_position.x -= speed;
+		m_sun_moved = true;
+	}
+	if(glfwGetKey(m_window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+	{
+		m_sun_position.x += speed;
+		m_sun_moved = true;
+	}
+	if(glfwGetKey(m_window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		m_sun_position.z -= speed;
+		m_sun_moved = true;
+	}
+	if(glfwGetKey(m_window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		m_sun_position.z += speed;
+		m_sun_moved = true;
+	}
+
+	if(m_sun_moved)
+	{
+		m_shadowmap.Update(m_scene, m_sun_position);
+		m_shadowmap_blurer.Blur(m_quad);
+		m_sun_moved = false;
 	}
 }
