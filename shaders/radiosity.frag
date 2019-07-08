@@ -34,7 +34,7 @@ const int kMaxMip = 5;
 
 const float kR = 0.4f; //world space sample radius
 const float kR2 = kR * kR;
-const float kQ = 32; //screen space radius which we first increase mip-level
+const float kQ = 32.0; //screen space radius which we first increase mip-level
 const float kInvN = 1.0f / float(kN);
 const float kTwoPi = 6.283185307179586f;
 // tau[N-1] = optimal number of spiral turns for N samples
@@ -93,7 +93,7 @@ void GetSampleLocationAndMip(in const int sample_index, in const float radius,
 	vec2 u = vec2(cos(theta), sin(theta));
 	loc = ivec2(u * h);
 
-	mip = clamp(findMSB(int(h)), kMinMip, kMaxMip);
+	mip = clamp(findMSB(int(h / kQ)), kMinMip, kMaxMip);
 }
 
 void GetSampleWeight(in const vec3 x_position, in const vec3 x_normal, in const vec3 y_position, in const vec3 y_normal, inout int weight, inout vec3 omega)
