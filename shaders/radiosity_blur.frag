@@ -3,7 +3,7 @@
 
 #define R 6
 
-#define SCALE 3
+#define SCALE 2
 #define EDGE_SHARPNESS 1.0f
 
 //predefine kernels

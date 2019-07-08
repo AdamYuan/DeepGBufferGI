@@ -25,3 +25,6 @@ make
 ![](https://raw.githubusercontent.com/AdamYuan/DeepGBufferGI/master/screenshots/2.png)
 ![](https://raw.githubusercontent.com/AdamYuan/DeepGBufferGI/master/screenshots/3.png)
 
+## Video
+https://www.bilibili.com/video/av58167879
+
