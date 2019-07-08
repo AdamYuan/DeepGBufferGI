@@ -99,7 +99,7 @@ void main()
 		samp = texelFetch(uOutputRadiance, samp_coord, 0).rgb;
 		float samp_depth = GetDepth(samp_coord);
 		vec3 samp_normal = GetNormal(samp_coord);
-		vec3 samp_position = ReconstructPosition(frag_coord, samp_depth);
+		vec3 samp_position = ReconstructPosition(samp_coord, samp_depth);
 
 		// spatial domain: offset kKernel tap
 		float weight = 0.3 + kKernel[abs(r)];

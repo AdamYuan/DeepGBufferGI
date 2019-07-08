@@ -54,6 +54,8 @@ namespace mygl3
 		{ glNamedFramebufferTexture(fbo_, attachment, texture.Get(), level); }
 		void AttachTexture(const Texture2DArray &texture, GLenum attachment, GLint level = 0)
 		{ glNamedFramebufferTexture(fbo_, attachment, texture.Get(), level); }
+		void AttachTextureLayer(const Texture2DArray &texture, GLenum attachment, GLint layer, GLint level = 0)
+		{ glNamedFramebufferTextureLayer(fbo_, attachment, texture.Get(), level, layer); }
 		void AttachRenderbuffer(const RenderBuffer &rbo, GLenum attachment)
 		{ glNamedFramebufferRenderbuffer(fbo_, attachment, GL_RENDERBUFFER, rbo.Get()); }
 		GLuint Get() const { return fbo_; }

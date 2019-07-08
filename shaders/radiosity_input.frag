@@ -123,6 +123,7 @@ void main()
 
 	float shadow = SampleShadow(position);
 	vec3 radiance = max( dot(normal, -uLightDir), 0.0f ) * vec3(5, 4, 4) * shadow * albedo;
-	if(gl_Layer == 0) radiance += texelFetch(uReprojectedRadiance, frag_coord.xy, 0).rgb * (1.0 - shadow) * albedo / BOUNCE_BIAS; //multiple bounces
+	if(gl_Layer == 0)
+		radiance += texelFetch(uReprojectedRadiance, frag_coord.xy, 0).rgb * (1.0 - shadow) * albedo / BOUNCE_BIAS; //multiple bounces
 	oRadiance = radiance;
 }

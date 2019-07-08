@@ -30,7 +30,7 @@ void GIRenderer::Initialize()
 	m_radiosity_input_shader.Initialize();
 	m_radiosity_input_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_radiosity_input_shader.LoadFromFile("shaders/radiosity_input.frag", GL_FRAGMENT_SHADER);
-	m_radiosity_input_shader.LoadFromFile("shaders/radiosity_input.geom", GL_GEOMETRY_SHADER);
+	m_radiosity_input_shader.LoadFromFile("shaders/quad.geom", GL_GEOMETRY_SHADER);
 	m_radiosity_input_unif_shadow_transform = m_radiosity_input_shader.GetUniform("uShadowTransform");
 	m_radiosity_input_unif_light_dir = m_radiosity_input_shader.GetUniform("uLightDir");
 

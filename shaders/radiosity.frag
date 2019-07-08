@@ -99,11 +99,11 @@ void GetSampleLocationAndMip(in const int sample_index, in const float radius,
 void GetSampleWeight(in const vec3 x_position, in const vec3 x_normal, in const vec3 y_position, in const vec3 y_normal, inout int weight, inout vec3 omega)
 {
 	omega = y_position - x_position;
+	weight = (dot(omega, x_normal) > 0
 #if PERFORMANCE_MODE != 0
-	weight = (dot(omega, x_normal) > 0 && dot(-omega, y_normal) > 0.01f) ? 1 : 0;
-#else
-	weight = 1;
+			  && dot(-omega, y_normal) > 0.01f
 #endif
+			 ) ? 1 : 0;
 	if(dot(omega, omega) > kR2) weight = 0;
 
 	omega = normalize(omega);
@@ -127,7 +127,7 @@ void main()
 	vec3 radiance_sum = vec3(0);
 
 	float radius = kR * 500 / LinearDepth(x_depth * 2.0f - 1.0f); //screen space sample radius
-    float random_rotation = (3 * frag_coord.x ^ frag_coord.y + frag_coord.x * frag_coord.y) * 10.0f + uTime;
+	float random_rotation = (3 * frag_coord.x ^ frag_coord.y + frag_coord.x * frag_coord.y) * 10.0f + uTime;
 	float radial_jitter = fract(sin(gl_FragCoord.x * 1e2 + uTime + gl_FragCoord.y) * 1e5 + sin(gl_FragCoord.y * 1e3) * 1e3) * 0.8 + 0.1;
 
 	for(int i = 0; i < kN; ++i)
@@ -163,7 +163,7 @@ void main()
 		sample_used += y_adj_weight > y_adj_weight_peeled ? y_weight : y_weight_peeled;
 		radiance_sum += y_adj_weight > y_adj_weight_peeled ? y_radiance : y_radiance_peeled;
 	}
-	radiance_sum *= kTwoPi / (float(sample_used) + 1e-4f);
+	radiance_sum *= kTwoPi / (float(sample_used) + 0.01f);
 
 	float vmax = max(radiance_sum.x, max(radiance_sum.y, radiance_sum.z));
 	float vmin = min(radiance_sum.x, min(radiance_sum.y, radiance_sum.z));
