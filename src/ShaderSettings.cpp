@@ -73,7 +73,7 @@ void ShaderSettings::Reset()
 	m_radiosity_min_mip = 3;
 	m_radiosity_sample_cnt = 13;
 	m_radiosity_radius = 0.4f;
-	m_radiosity_blur_radius = 6;
+	m_radiosity_blur_radius = 4;
 	m_radiosity_blur_scale = 3;
 	m_radiosity_blur_edge_sharpness = 1.0f;
 	m_radiosity_temporal_blend_alpha = 0.85f;
@@ -86,17 +86,20 @@ void ShaderSettings::SetRadiosityQuality(int quality)
 		m_radiosity_min_mip = 3;
 		m_radiosity_sample_cnt = 13;
 		m_radiosity_use_y_normal_test = false;
+		m_radiosity_blur_radius = 4;
 	}
 	else if(quality == 1)
 	{
 		m_radiosity_min_mip = 2;
 		m_radiosity_sample_cnt = 14;
 		m_radiosity_use_y_normal_test = true;
+		m_radiosity_blur_radius = 5;
 	}
 	else
 	{
 		m_radiosity_min_mip = 0;
 		m_radiosity_sample_cnt = 30;
 		m_radiosity_use_y_normal_test = true;
+		m_radiosity_blur_radius = 6;
 	}
 }

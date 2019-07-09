@@ -181,31 +181,19 @@ void Application::ui_control()
 		ui_info_and_guide();
 		ImGui::Separator();
 
-		if(ImGui::Button("Apply Settings")) { load_recompilable_shaders(); }
+		if(ImGui::Button("Apply Settings [C]")) { load_recompilable_shaders(); }
 
-		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-		ImGui::CollapsingHeader("Deep G-Buffer Settings");
-		ImGui::PopItemFlag();
+		if(ImGui::CollapsingHeader("Deep G-Buffer Settings", ImGuiTreeNodeFlags_DefaultOpen))
+			ui_deepgbuffer_settings();
 
-		ui_deepgbuffer_settings();
+		if(ImGui::CollapsingHeader("Radiosity Settings", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ui_radiosity_settings();
+			ui_radiosity_blur_settings();
+		}
 
-		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-		ImGui::CollapsingHeader("Radiosity Sampling Settings");
-		ImGui::PopItemFlag();
-
-		ui_radiosity_settings();
-
-		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-		ImGui::CollapsingHeader("Radiosity Blur Settings");
-		ImGui::PopItemFlag();
-
-		ui_radiosity_blur_settings();
-
-		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-		ImGui::CollapsingHeader("Radiosity Temporal Blend Settings");
-		ImGui::PopItemFlag();
-
-		ui_radiosity_temporal_blend_settings();
+		if(ImGui::CollapsingHeader("Temporal Blend Settings", ImGuiTreeNodeFlags_DefaultOpen))
+			ui_radiosity_temporal_blend_settings();
 
 		ImGui::End();
 	}
@@ -235,6 +223,8 @@ void Application::ui_deepgbuffer_settings()
 
 void Application::ui_radiosity_settings()
 {
+	ImGui::Text("Load pattern: ");
+	ImGui::SameLine();
 	if(ImGui::Button("High Performance"))
 		m_settings.SetRadiosityQuality(0);
 	ImGui::SameLine();
@@ -243,21 +233,22 @@ void Application::ui_radiosity_settings()
 	ImGui::SameLine();
 	if(ImGui::Button("High Quality"))
 		m_settings.SetRadiosityQuality(2);
-	ImGui::DragFloat("Radius##0", &m_settings.m_radiosity_radius, 0.01f, 0.0f, 2.0f);
-	ImGui::DragInt("Samples", &m_settings.m_radiosity_sample_cnt, 1, 1, 90);
+	ImGui::DragFloat("Sample Radius", &m_settings.m_radiosity_radius, 0.01f, 0.0f, 2.0f);
+	ImGui::DragInt("Sample Count", &m_settings.m_radiosity_sample_cnt, 1, 1, 90);
 	ImGui::DragInt("Min Mip-Level", &m_settings.m_radiosity_min_mip, 1, 0, kMipmapLayers - 1);
 	ImGui::Checkbox("Y Normal Test", &m_settings.m_radiosity_use_y_normal_test);
 }
 
 void Application::ui_radiosity_blur_settings()
 {
-	ImGui::DragInt("Radius##1", &m_settings.m_radiosity_blur_radius, 1, 1, 6);
-	ImGui::DragInt("Scale", &m_settings.m_radiosity_blur_scale, 1, 1, 6);
+	ImGui::DragInt("Blur Radius", &m_settings.m_radiosity_blur_radius, 1, 1, 6);
+	ImGui::DragInt("Blur Scale", &m_settings.m_radiosity_blur_scale, 1, 1, 6);
+	ImGui::DragFloat("Edge Sharpness", &m_settings.m_radiosity_blur_edge_sharpness, 0.1f, 0.0f, 2.0f);
 }
 
-void Application::ui_radiosity_temporal_blend_settings()
+bool Application::ui_radiosity_temporal_blend_settings()
 {
-	ImGui::DragFloat("Alpha", &m_settings.m_radiosity_temporal_blend_alpha, 0.01f, 0.0f, 1.0f);
+	return ImGui::DragFloat("Alpha", &m_settings.m_radiosity_temporal_blend_alpha, 0.01f, 0.0f, 1.0f);
 }
 
 void Application::ui_load_scene()
@@ -274,8 +265,8 @@ void Application::ui_info_and_guide()
 {
 	ImGui::Text("Renderer: %s", glGetString(GL_RENDERER));
 	ImGui::Text("FPS: %f", m_fps.GetFps());
-	ImGui::Text("Press [WASD] to move around");
 	ImGui::Text("Drag Mouse to change perspective");
+	ImGui::Text("Press [WASD] to move around");
 	ImGui::Text("Press [Arrow Keys] to change light direction");
 	ImGui::Text("Press [X] to toggle GUI");
 }
@@ -287,5 +278,7 @@ void Application::glfw_key_callback(GLFWwindow *window, int key, int, int action
 	{
 		if(key == GLFW_KEY_X)
 			app->m_show_ui = !app->m_show_ui;
+		if(key == GLFW_KEY_C)
+			app->load_recompilable_shaders();
 	}
 }

@@ -89,6 +89,12 @@ static bool load_obj(const char *filename, const std::string &base_dir,
 		return false;
 	}
 
+	if(materials->empty())
+	{
+		printf("[SCENE]Material info not found\n");
+		return false;
+	}
+
 	if (!err.empty())
 		printf("%s\n", err.c_str());
 

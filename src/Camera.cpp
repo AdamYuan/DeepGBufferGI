@@ -22,26 +22,27 @@ void Camera::Control(GLFWwindow *window, const mygl3::Framerate &fps)
 {
 	static glm::dvec2 last_mouse_pos;
 
+	float speed = fps.GetDelta() * m_speed;
+	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		move_forward(speed, 0.0f);
+	if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		move_forward(speed, PIF * 0.5f);
+	if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		move_forward(speed, -PIF * 0.5f);
+	if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		move_forward(speed, PIF);
+	if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+		m_position.y += speed;
+	if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		m_position.y -= speed;
+
+
 	glm::dvec2 cur_pos;
 	glfwGetCursorPos(window, &cur_pos.x, &cur_pos.y);
 
 	if(!ImGui::GetCurrentContext()->NavWindow
 	   || ImGui::GetCurrentContext()->NavWindow->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)
 	{
-		float speed = fps.GetDelta() * m_speed;
-		if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-			move_forward(speed, 0.0f);
-		if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-			move_forward(speed, PIF * 0.5f);
-		if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-			move_forward(speed, -PIF * 0.5f);
-		if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-			move_forward(speed, PIF);
-		if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-			m_position.y += speed;
-		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-			m_position.y -= speed;
-
 		if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT))
 		{
 			glfwGetCursorPos(window, &cur_pos.x, &cur_pos.y);

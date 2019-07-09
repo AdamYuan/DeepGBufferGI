@@ -17,7 +17,7 @@ public:
 	int m_radiosity_min_mip = 3;
 	int m_radiosity_sample_cnt = 13;
 	float m_radiosity_radius = 0.4f;
-	int m_radiosity_blur_radius = 6;
+	int m_radiosity_blur_radius = 4;
 	int m_radiosity_blur_scale = 3;
 	float m_radiosity_blur_edge_sharpness = 1.0f;
 	float m_radiosity_temporal_blend_alpha = 0.85f;

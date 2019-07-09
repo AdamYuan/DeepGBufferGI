@@ -39,8 +39,6 @@ public:
 	void Control(GLFWwindow *window, const mygl3::Framerate &fps);
 	void Update();
 	const mygl3::Buffer &GetBuffer() const { return m_ubo; }
-	//const glm::mat4 &GetView() const { return m_view; }
-	//const glm::mat4 &GetProjection() const { return m_projection; }
 };
 
 #endif //ADYPT_CAMERA_HPP

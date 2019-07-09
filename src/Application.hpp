@@ -50,7 +50,7 @@ private:
 	void ui_deepgbuffer_settings();
 	void ui_radiosity_settings();
 	void ui_radiosity_blur_settings();
-	void ui_radiosity_temporal_blend_settings();
+	bool ui_radiosity_temporal_blend_settings();
 	static bool ui_file_open(const char *label, const char *btn, char *buf, size_t buf_size, const char *title,
 					  const std::vector<std::string> &filters);
 public:
