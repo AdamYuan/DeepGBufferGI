@@ -173,7 +173,7 @@ void Application::ui_control()
 	if (ImGui::Begin("INFO", nullptr,
 					 ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize
 					 |ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove
-					 |ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoBringToFrontOnFocus))
+					 |ImGuiWindowFlags_NoSavedSettings))
 	{
 		ui_load_scene();
 		ImGui::Separator();
