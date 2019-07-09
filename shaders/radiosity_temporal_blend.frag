@@ -1,12 +1,12 @@
-#version 450 core
+//#version 450 core
+
+//#define ALPHA 0.85f
 
 in vec2 vTexcoords;
 layout (binding = 7) uniform sampler2D uOutputRadiance;
 layout (binding = 8) uniform sampler2D uReprojectedRadiance;
 
 out vec3 oBlended;
-
-#define ALPHA 0.85f
 
 void main()
 {

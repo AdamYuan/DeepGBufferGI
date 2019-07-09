@@ -1,4 +1,6 @@
-#version 450 core
+//#version 450 core
+//#define MIN_SEPARATE (0.05f)
+
 #extension GL_ARB_bindless_texture : require
 
 layout (binding = 0) uniform uuDiffuseTextures { sampler2D uDiffuseTextures[1024]; };
@@ -13,7 +15,7 @@ in vec4 gLastScreenPos;
 flat in int gTexture;
 flat in vec3 gDiffuseColor;
 
-const float kNear = 1.0f / 512.0f, kFar = 4.0f, kMinSeparate = 0.05f;
+const float kNear = 1.0f / 512.0f, kFar = 4.0f;
 float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + kNear - depth * (kFar - kNear)); }
 
 //oct16 normal encoding :
@@ -34,7 +36,7 @@ void main()
 	if(samp.w < 0.5f) discard;
 	if(gl_Layer == 1 && 
 	   LinearDepth( gLastScreenPos.z / gLastScreenPos.w ) <= 
-	   LinearDepth( texture(uLastDepthTexture, (gLastScreenPos.xy / gLastScreenPos.w) * 0.5f + 0.5f ).r * 2.0f - 1.0f ) + kMinSeparate)
+	   LinearDepth( texture(uLastDepthTexture, (gLastScreenPos.xy / gLastScreenPos.w) * 0.5f + 0.5f ).r * 2.0f - 1.0f ) + MIN_SEPARATE)
 		discard;
 	oAlbedo = samp.rgb;
 	oNormal = float32x3_to_oct(normalize(gNormal));

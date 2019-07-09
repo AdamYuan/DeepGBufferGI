@@ -13,10 +13,10 @@ void DeepGBuffer::Initialize()
 	m_albedo.Storage(kWidth, kHeight, 2, GL_RGB8, 1);
 	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 	m_normal.Initialize();
-	m_normal.Storage(kWidth, kHeight, 2, GL_RG8_SNORM, kMaxMip);
+	m_normal.Storage(kWidth, kHeight, 2, GL_RG8_SNORM, kMipmapLayers);
 	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 	m_depth.Initialize();
-	m_depth.Storage(kWidth, kHeight, 2, GL_DEPTH_COMPONENT32, kMaxMip);
+	m_depth.Storage(kWidth, kHeight, 2, GL_DEPTH_COMPONENT32, kMipmapLayers);
 	m_albedo.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
 	m_last_depth.Initialize();
@@ -31,10 +31,15 @@ void DeepGBuffer::Initialize()
 	GLenum attachments[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
 	glNamedFramebufferDrawBuffers(m_fbo.Get(), 2, attachments);
 
+}
+
+void DeepGBuffer::LoadShader(const ShaderSettings &settings)
+{
+	m_shader.~Shader();
 	m_shader.Initialize();
 	m_shader.LoadFromFile("shaders/deepgbuffer.vert", GL_VERTEX_SHADER);
 	m_shader.LoadFromFile("shaders/deepgbuffer.geom", GL_GEOMETRY_SHADER);
-	m_shader.LoadFromFile("shaders/deepgbuffer.frag", GL_FRAGMENT_SHADER);
+	m_shader.Load(settings.GetDeepGBufferFragSrc().c_str(), GL_FRAGMENT_SHADER);
 	m_unif_last_view = m_shader.GetUniform("uLastView");
 }
 

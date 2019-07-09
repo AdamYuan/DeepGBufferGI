@@ -1,10 +1,9 @@
 //from https://casual-effects.com/research/Mara2016DeepGBuffer/
-#version 450 core
+//#version 450 core
 
-#define R 6
-
-#define SCALE 2
-#define EDGE_SHARPNESS 1.0f
+//#define R {6}
+//#define SCALE {2}
+//#define EDGE_SHARPNESS {1.0f}
 
 //predefine kernels
 #       if R == 1 

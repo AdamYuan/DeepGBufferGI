@@ -1,6 +1,11 @@
-#version 450 core
+//#version 450 core
 
-#define PERFORMANCE_MODE 0
+//#define R (0.4f)
+//#define SAMPLE_CNT (13)
+//#define MIN_MIP (3)
+//#define TAU (5)
+//#define USE_Y_NORMAL_TEST (0)
+//world space radius of samples
 
 layout(std140, binding = 1) uniform uuCamera
 {
@@ -20,30 +25,12 @@ uniform ivec2 uResolution;
 in vec2 vTexcoords;
 out vec3 oRadiance;
 
-#if PERFORMANCE_MODE == 0
-const int kN = 13; //sample count
-const int kMinMip = 3;
-#elif PERFORMANCE_MODE == 1
-const int kN = 14;
-const int kMinMip = 2;
-#else
-const int kN = 30;
-const int kMinMip = 0;
-#endif
-const int kMaxMip = 5;
+#define MAX_MIP 5
 
-const float kR = 0.4f; //world space sample radius
-const float kR2 = kR * kR;
+const float R2 = R * R;
 const float kQ = 32.0; //screen space radius which we first increase mip-level
-const float kInvN = 1.0f / float(kN);
+const float kInvSampleCnt = 1.0f / float(SAMPLE_CNT);
 const float kTwoPi = 6.283185307179586f;
-// tau[N-1] = optimal number of spiral turns for N samples
-const int tau[] = {1, 1, 2, 3, 2, 5, 2, 3, 2, 3, 3, 5, 5, 3, 4,
-	7, 5, 5, 7, 9, 8, 5, 5, 7, 7, 7, 8, 5, 8, 11, 12, 7, 10, 13, 8,
-	11, 8, 7, 14, 11, 11, 13, 12, 13, 19, 17, 13, 11, 18, 19, 11, 11,
-	14, 17, 21, 15, 16, 17, 18, 13, 17, 11, 17, 19, 18, 25, 18, 19,
-	19, 29, 21, 19, 27, 31, 29, 21, 18, 17, 29, 31, 31, 23, 18, 25,
-	26, 25, 23, 19, 34, 19, 27, 21, 25, 39, 29, 17, 21, 27};
 
 const float kNear = 1.0f / 512.0f, kFar = 4.0f;
 float LinearDepth(in const float depth) { return (2.0 * kNear * kFar) / (kFar + kNear - depth * (kFar - kNear)); }
@@ -87,24 +74,24 @@ vec3 GetRadiance(in const ivec3 coord, in const int mip)
 void GetSampleLocationAndMip(in const int sample_index, in const float radius, 
 							 in const float random_rotation, in const float radial_jitter, out ivec2 loc, out int mip)
 {
-	float k = (float(sample_index) + radial_jitter) * kInvN;
-	float theta = kTwoPi * tau[kN - 1] * k + random_rotation;
+	float k = (float(sample_index) + radial_jitter) * kInvSampleCnt;
+	float theta = kTwoPi * TAU * k + random_rotation;
 	float h = k * radius;
 	vec2 u = vec2(cos(theta), sin(theta));
 	loc = ivec2(u * h);
 
-	mip = clamp(findMSB(int(h / kQ)), kMinMip, kMaxMip);
+	mip = clamp(findMSB(int(h / kQ)), MIN_MIP, MAX_MIP);
 }
 
 void GetSampleWeight(in const vec3 x_position, in const vec3 x_normal, in const vec3 y_position, in const vec3 y_normal, inout int weight, inout vec3 omega)
 {
 	omega = y_position - x_position;
 	weight = (dot(omega, x_normal) > 0
-#if PERFORMANCE_MODE != 0
+#if USE_Y_NORMAL_TEST == 1
 			  && dot(-omega, y_normal) > 0.01f
 #endif
 			 ) ? 1 : 0;
-	if(dot(omega, omega) > kR2) weight = 0;
+	if(dot(omega, omega) > R2) weight = 0;
 
 	omega = normalize(omega);
 }
@@ -126,11 +113,11 @@ void main()
 	int sample_used = 0;
 	vec3 radiance_sum = vec3(0);
 
-	float radius = kR * 500 / LinearDepth(x_depth * 2.0f - 1.0f); //screen space sample radius
+	float radius = R * 500 / LinearDepth(x_depth * 2.0f - 1.0f); //screen space sample radius
 	float random_rotation = (3 * frag_coord.x ^ frag_coord.y + frag_coord.x * frag_coord.y) * 10.0f + uTime;
 	float radial_jitter = fract(sin(gl_FragCoord.x * 1e2 + uTime + gl_FragCoord.y) * 1e5 + sin(gl_FragCoord.y * 1e3) * 1e3) * 0.8 + 0.1;
 
-	for(int i = 0; i < kN; ++i)
+	for(int i = 0; i < SAMPLE_CNT; ++i)
 	{
 		ivec2 relative_loc; int mip;
 		GetSampleLocationAndMip(i, radius, random_rotation, radial_jitter, relative_loc, mip);

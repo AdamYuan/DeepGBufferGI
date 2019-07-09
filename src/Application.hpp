@@ -6,6 +6,7 @@
 #define SPARSEVOXELOCTREE_APPLICATION_HPP
 
 #include <mygl3/utils/framerate.hpp>
+#include <memory>
 #include "Scene.hpp"
 #include "DeepGBuffer.hpp"
 #include "ShadowMap.hpp"
@@ -17,8 +18,11 @@ class Application
 {
 private:
 	GLFWwindow *m_window;
+	std::unique_ptr<Scene> m_scene;
 	Camera m_camera;
-	Scene m_scene;
+
+	ShaderSettings m_settings;
+
 	DeepGBuffer m_gbuffer;
 	ShadowMap m_shadowmap;
 	ShadowMapBlurer m_shadowmap_blurer;
@@ -30,12 +34,25 @@ private:
 	ScreenQuad m_quad;
 	mygl3::Shader m_final_pass_shader;
 
-	//test area
-	//mygl3::FrameBuffer m_test_fbo;
-	//mygl3::Texture2D m_test_texture;
 	glm::vec3 m_sun_position{0.0f, 10.0f, 0.0f};
 	bool m_sun_moved{true};
-	void control_sun();
+	void sun_key_control();
+
+	static void glfw_key_callback(GLFWwindow *window, int key, int, int action, int);
+
+	void load_scene(const char *filename);
+	void load_recompilable_shaders();
+
+	bool m_show_ui = true;
+	void ui_control();
+	void ui_load_scene();
+	void ui_info_and_guide();
+	void ui_deepgbuffer_settings();
+	void ui_radiosity_settings();
+	void ui_radiosity_blur_settings();
+	void ui_radiosity_temporal_blend_settings();
+	static bool ui_file_open(const char *label, const char *btn, char *buf, size_t buf_size, const char *title,
+					  const std::vector<std::string> &filters);
 public:
 	Application();
 	~Application();

@@ -13,6 +13,8 @@ make
 * [GLM](https://glm.g-truc.net/) - Maths calculations
 * [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) - Image loading
 * [TinyOBJLoader](https://github.com/syoyo/tinyobjloader) - Obj loading
+* [ImGui](https://github.com/ocornut/imgui) - UI rendering
+* [portable-file-dialogs](https://github.com/samhocevar/portable-file-dialogs) - Call native file dialog (require Zenity on linux)
 
 ## Reference
 * https://casual-effects.com/research/Mara2016DeepGBuffer/ - Bilateral Filter implementation
@@ -23,7 +25,6 @@ make
 ![](https://raw.githubusercontent.com/AdamYuan/DeepGBufferGI/master/screenshots/0.png)
 ![](https://raw.githubusercontent.com/AdamYuan/DeepGBufferGI/master/screenshots/1.png)
 ![](https://raw.githubusercontent.com/AdamYuan/DeepGBufferGI/master/screenshots/2.png)
-![](https://raw.githubusercontent.com/AdamYuan/DeepGBufferGI/master/screenshots/3.png)
 
 ## Video
 https://www.bilibili.com/video/av58167879

@@ -6,9 +6,15 @@
 #include "Application.hpp"
 #include "Config.hpp"
 #include "OglBindings.hpp"
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+#include <imgui/imgui_internal.h>
+#include <portable-file-dialogs.h>
 
 Application::Application()
 {
+	//Initialize OpenGL and GLFW
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
@@ -17,91 +23,101 @@ Application::Application()
 	m_window = glfwCreateWindow(1280, 720, "Deep G-Buffer Global Illumination", nullptr, nullptr);
 	glfwMakeContextCurrent(m_window);
 	glfwSetWindowUserPointer(m_window, (void*)this);
-
+	glfwSetKeyCallback(m_window, glfw_key_callback);
 	gl3wInit();
 
+	//Initialize contents
+	m_settings.Initialize();
 	m_quad.Initialize();
 	m_camera.Initialize();
-
-	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/sibenik/sibenik.obj");
-	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/living_room/living_room.obj");
-	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/San_Miguel/san-miguel-low-poly.obj");
-	m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/sponza/sponza.obj");
-	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/CornellBox/CornellBox-Original.obj");
-	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/vokselia_spawn/vokselia_spawn.obj");
-	//m_scene.Initialize("/home/adamyuan/Projects/Adypt/models/fireplace_room/fireplace_room.obj");
-
 	m_gbuffer.Initialize();
+	m_shadowmap.Initialize();
+	m_shadowmap_blurer.Initialize(m_shadowmap);
+	m_renderer.Initialize();
+	m_gi_blurer.Initialize(m_renderer);
+	m_gi_temporal.Initialize(m_renderer);
+	load_recompilable_shaders();
+
 	m_final_pass_shader.Initialize();
 	m_final_pass_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_final_pass_shader.LoadFromFile("shaders/finalpass.frag", GL_FRAGMENT_SHADER);
 
-	m_shadowmap.Initialize();
-	m_shadowmap_blurer.Initialize(m_shadowmap);
 
-	m_renderer.Initialize();
-	m_gi_blurer.Initialize(m_renderer);
-	m_gi_temporal.Initialize(m_renderer);
+	//Initialize ImGui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+	ImGuiStyle &st = ImGui::GetStyle();
+	st.WindowBorderSize = 0.0f;
+	st.Alpha = 0.7f;
+	st.WindowRounding = 0.0f;
+	st.ChildRounding = 0.0f;
+	st.FrameRounding = 0.0f;
+	st.ScrollbarRounding = 0.0f;
+	st.GrabRounding = 0.0f;
+	st.TabRounding = 0.0f;
 
-	/*m_test_texture.Initialize();
-	m_test_texture.Storage(kWidth, kHeight, GL_RGBA8);
-	m_test_fbo.Initialize();
-	m_test_fbo.AttachTexture(m_test_texture, GL_COLOR_ATTACHMENT0);
+	ImGui_ImplGlfw_InitForOpenGL(m_window, true);
+	ImGui_ImplOpenGL3_Init("#version 450 core");
 
-	m_test_fbo.Bind();
-	glClear(GL_COLOR_BUFFER_BIT);
-	mygl3::FrameBuffer::Unbind();
-
-	m_test_texture.Bind(2);
-	glBindImageTexture(3, m_test_texture.Get(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
-
-	m_final_pass_shader.Use();
-	m_quad.Render();
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);*/
+	//Initialize portable-file-dialogs
+	pfd::settings::verbose(true);
 }
 
 Application::~Application()
 {
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
 }
 
 void Application::Run()
 {
-	char title[64];
 	while(!glfwWindowShouldClose(m_window))
 	{
-		glViewport(0, 0, kWidth, kHeight);
 		m_fps.Update();
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
-		control_sun();
-		m_camera.Control(m_window, m_fps);
-		m_camera.Update();
+		glViewport(0, 0, kWidth, kHeight);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-		sprintf(title, "fps: %f", m_fps.GetFps());
-		glfwSetWindowTitle(m_window, title);
+		if(m_show_ui) ui_control();
 
-		m_gbuffer.Update(m_scene, m_camera);
-		m_gi_temporal.Reproject(m_quad, m_camera, m_gbuffer);
+		if(m_scene)
+		{
+			sun_key_control();
+			m_camera.Control(m_window, m_fps);
+			m_camera.Update();
 
-		m_renderer.PrepareInputRadiance(m_quad, m_camera, m_gbuffer, m_shadowmap, m_gi_temporal);
-		m_renderer.SampleRadiosity(m_quad, m_camera, m_gbuffer);
-		m_gi_blurer.Blur(m_quad, m_gbuffer);
-		m_gi_temporal.Blend(m_quad);
+			m_gbuffer.Update(*m_scene, m_camera);
+			m_gi_temporal.Reproject(m_quad, m_camera, m_gbuffer);
 
-		m_gbuffer.GetAlbedo().Bind(kAlbedoSampler2DArray);
-		m_renderer.GetInputRadiance().Bind(kInputRadianceSampler2DArray);
-		m_renderer.GetOutputRadiance().Bind(kOutputRadianceSampler2D);
-		//m_shadowmap.GetTexture().Bind(2);
-		m_final_pass_shader.Use();
-		m_quad.Render();
+			m_renderer.PrepareInputRadiance(m_quad, m_camera, m_gbuffer, m_shadowmap, m_gi_temporal);
+			m_renderer.SampleRadiosity(m_quad, m_camera, m_gbuffer);
+			m_gi_blurer.Blur(m_quad, m_gbuffer);
+			m_gi_temporal.Blend(m_quad);
+
+			m_gbuffer.GetAlbedo().Bind(kAlbedoSampler2DArray);
+			m_renderer.GetInputRadiance().Bind(kInputRadianceSampler2DArray);
+			m_renderer.GetOutputRadiance().Bind(kOutputRadianceSampler2D);
+			m_final_pass_shader.Use();
+			m_quad.Render();
+		}
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(m_window);
 		glfwPollEvents();
 	}
 }
 
-void Application::control_sun()
+void Application::sun_key_control()
 {
 	float speed = m_fps.GetDelta();
 	if(glfwGetKey(m_window, GLFW_KEY_LEFT) == GLFW_PRESS)
@@ -127,8 +143,149 @@ void Application::control_sun()
 
 	if(m_sun_moved)
 	{
-		m_shadowmap.Update(m_scene, m_sun_position);
+		m_shadowmap.Update(*m_scene, m_sun_position);
 		m_shadowmap_blurer.Blur(m_quad);
 		m_sun_moved = false;
+	}
+}
+
+void Application::load_scene(const char *filename)
+{
+	m_scene.reset(new Scene);
+	if(!m_scene->Initialize(filename)) m_scene.reset();
+	m_sun_moved = true;
+}
+
+void Application::load_recompilable_shaders()
+{
+	m_gbuffer.LoadShader(m_settings);
+	m_renderer.LoadRadiosityShader(m_settings);
+	m_gi_blurer.LoadShader(m_settings);
+	m_gi_temporal.LoadBlendShader(m_settings);
+}
+
+void Application::ui_control()
+{
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f),
+							ImGuiCond_Always, ImVec2(0, 0));
+	ImGui::SetNextWindowSize(ImVec2(0.0f, kHeight), ImGuiCond_Always);
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.4f)); // Transparent background
+	if (ImGui::Begin("INFO", nullptr,
+					 ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize
+					 |ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove
+					 |ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoBringToFrontOnFocus))
+	{
+		ui_load_scene();
+		ImGui::Separator();
+
+		ui_info_and_guide();
+		ImGui::Separator();
+
+		if(ImGui::Button("Apply Settings")) { load_recompilable_shaders(); }
+
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+		ImGui::CollapsingHeader("Deep G-Buffer Settings");
+		ImGui::PopItemFlag();
+
+		ui_deepgbuffer_settings();
+
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+		ImGui::CollapsingHeader("Radiosity Sampling Settings");
+		ImGui::PopItemFlag();
+
+		ui_radiosity_settings();
+
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+		ImGui::CollapsingHeader("Radiosity Blur Settings");
+		ImGui::PopItemFlag();
+
+		ui_radiosity_blur_settings();
+
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+		ImGui::CollapsingHeader("Radiosity Temporal Blend Settings");
+		ImGui::PopItemFlag();
+
+		ui_radiosity_temporal_blend_settings();
+
+		ImGui::End();
+	}
+	ImGui::PopStyleColor();
+}
+
+bool
+Application::ui_file_open(const char *label, const char *btn, char *buf, size_t buf_size, const char *title,
+						  const std::vector<std::string> &filters)
+{
+	bool ret = ImGui::InputText(label, buf, buf_size);
+	ImGui::SameLine();
+
+	if(ImGui::Button(btn))
+	{
+		auto file_dialog = pfd::open_file(title, "", filters, false);
+		if(!file_dialog.result().empty()) strcpy(buf, file_dialog.result().front().c_str());
+		ret = true;
+	}
+	return ret;
+}
+
+void Application::ui_deepgbuffer_settings()
+{
+	ImGui::DragFloat("Min Separation", &m_settings.m_deepgbuffer_min_separate, 0.01f, 0.0f, 2.0f);
+}
+
+void Application::ui_radiosity_settings()
+{
+	if(ImGui::Button("High Performance"))
+		m_settings.SetRadiosityQuality(0);
+	ImGui::SameLine();
+	if(ImGui::Button("Balanced"))
+		m_settings.SetRadiosityQuality(1);
+	ImGui::SameLine();
+	if(ImGui::Button("High Quality"))
+		m_settings.SetRadiosityQuality(2);
+	ImGui::DragFloat("Radius##0", &m_settings.m_radiosity_radius, 0.01f, 0.0f, 2.0f);
+	ImGui::DragInt("Samples", &m_settings.m_radiosity_sample_cnt, 1, 1, 90);
+	ImGui::DragInt("Min Mip-Level", &m_settings.m_radiosity_min_mip, 1, 0, kMipmapLayers - 1);
+	ImGui::Checkbox("Y Normal Test", &m_settings.m_radiosity_use_y_normal_test);
+}
+
+void Application::ui_radiosity_blur_settings()
+{
+	ImGui::DragInt("Radius##1", &m_settings.m_radiosity_blur_radius, 1, 1, 6);
+	ImGui::DragInt("Scale", &m_settings.m_radiosity_blur_scale, 1, 1, 6);
+}
+
+void Application::ui_radiosity_temporal_blend_settings()
+{
+	ImGui::DragFloat("Alpha", &m_settings.m_radiosity_temporal_blend_alpha, 0.01f, 0.0f, 1.0f);
+}
+
+void Application::ui_load_scene()
+{
+	constexpr size_t kFilenameBufSize = 512;
+	static char obj_name_buf[kFilenameBufSize];
+	ui_file_open("OBJ Filename", "...##0", obj_name_buf, kFilenameBufSize, "OBJ Filename",
+				 {"Wavefront OBJ File (.obj)", "*.obj", "All Files", "*"});
+	if(ImGui::Button("Load Scene"))
+		load_scene(obj_name_buf);
+}
+
+void Application::ui_info_and_guide()
+{
+	ImGui::Text("Renderer: %s", glGetString(GL_RENDERER));
+	ImGui::Text("FPS: %f", m_fps.GetFps());
+	ImGui::Text("Press [WASD] to move around");
+	ImGui::Text("Drag Mouse to change perspective");
+	ImGui::Text("Press [Arrow Keys] to change light direction");
+	ImGui::Text("Press [X] to toggle GUI");
+}
+
+void Application::glfw_key_callback(GLFWwindow *window, int key, int, int action, int)
+{
+	auto *app = (Application *)glfwGetWindowUserPointer(window);
+	if(action == GLFW_PRESS)
+	{
+		if(key == GLFW_KEY_X)
+			app->m_show_ui = !app->m_show_ui;
 	}
 }

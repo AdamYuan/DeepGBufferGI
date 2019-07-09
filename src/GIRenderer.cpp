@@ -12,7 +12,7 @@
 void GIRenderer::Initialize()
 {
 	m_input_radiance.Initialize();
-	m_input_radiance.Storage(kWidth, kHeight, 2, GL_R11F_G11F_B10F, kMaxMip);
+	m_input_radiance.Storage(kWidth, kHeight, 2, GL_R11F_G11F_B10F, kMipmapLayers);
 	m_input_radiance.SetSizeFilter(GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
 	m_input_radiance.SetWrapFilter(GL_CLAMP_TO_BORDER);
 
@@ -33,15 +33,20 @@ void GIRenderer::Initialize()
 	m_radiosity_input_shader.LoadFromFile("shaders/quad.geom", GL_GEOMETRY_SHADER);
 	m_radiosity_input_unif_shadow_transform = m_radiosity_input_shader.GetUniform("uShadowTransform");
 	m_radiosity_input_unif_light_dir = m_radiosity_input_shader.GetUniform("uLightDir");
+}
 
+void GIRenderer::LoadRadiosityShader(const ShaderSettings &settings)
+{
+	m_radiosity_shader.~Shader();
 	m_radiosity_shader.Initialize();
 	m_radiosity_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
-	m_radiosity_shader.LoadFromFile("shaders/radiosity.frag", GL_FRAGMENT_SHADER);
+	m_radiosity_shader.Load(settings.GetRadiositySrc().c_str(), GL_FRAGMENT_SHADER);
 	m_radiosity_unif_time = m_radiosity_shader.GetUniform("uTime");
 	m_radiosity_unif_resolution = m_radiosity_shader.GetUniform("uResolution");
 	constexpr GLint kResolution[] = {kWidth, kHeight};
 	m_radiosity_shader.SetIVec2(m_radiosity_unif_resolution, kResolution);
 }
+
 
 void GIRenderer::PrepareInputRadiance(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer,
 									  const ShadowMap &shadowmap, const GITemporalFilter &temporal)
@@ -97,18 +102,23 @@ void GIBlurer::Initialize(const GIRenderer &renderer)
 
 	m_target = &renderer.GetOutputRadiance();
 
-	m_shader.Initialize();
-	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
-	m_shader.LoadFromFile("shaders/radiosity_blur.frag", GL_FRAGMENT_SHADER);
-	m_unif_direction = m_shader.GetUniform("uDirection");
-	m_unif_resolution = m_shader.GetUniform("uResolution");
-	constexpr GLint kResolution[] = {kWidth, kHeight};
-	m_shader.SetIVec2(m_unif_resolution, kResolution);
 
 	m_blur_fbo[0].Initialize();
 	m_blur_fbo[0].AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
 	m_blur_fbo[1].Initialize();
 	m_blur_fbo[1].AttachTexture(*m_target, GL_COLOR_ATTACHMENT0);
+}
+
+void GIBlurer::LoadShader(const ShaderSettings &settings)
+{
+	m_shader.~Shader();
+	m_shader.Initialize();
+	m_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_shader.Load(settings.GetRadiosityBlurSrc().c_str(), GL_FRAGMENT_SHADER);
+	m_unif_direction = m_shader.GetUniform("uDirection");
+	m_unif_resolution = m_shader.GetUniform("uResolution");
+	constexpr GLint kResolution[] = {kWidth, kHeight};
+	m_shader.SetIVec2(m_unif_resolution, kResolution);
 }
 
 void GIBlurer::Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer)
@@ -160,14 +170,17 @@ void GITemporalFilter::Initialize(const GIRenderer &renderer)
 	m_reproject_fbo.Initialize();
 	m_reproject_fbo.AttachTexture(m_reprojected_texture, GL_COLOR_ATTACHMENT0);
 
-	m_blend_shader.Initialize();
-	m_blend_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
-	m_blend_shader.LoadFromFile("shaders/radiosity_temporal_blend.frag", GL_FRAGMENT_SHADER);
-
 	m_blend_fbo.Initialize();
 	m_blend_fbo.AttachTexture(m_result_texture, GL_COLOR_ATTACHMENT0);
 }
 
+void GITemporalFilter::LoadBlendShader(const ShaderSettings &settings)
+{
+	m_blend_shader.~Shader();
+	m_blend_shader.Initialize();
+	m_blend_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
+	m_blend_shader.Load(settings.GetRadiosityTemporalBlendSrc().c_str(), GL_FRAGMENT_SHADER);
+}
 
 void GITemporalFilter::Reproject(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer)
 {

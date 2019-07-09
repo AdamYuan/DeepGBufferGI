@@ -11,6 +11,7 @@
 #include "Camera.hpp"
 #include "Scene.hpp"
 #include "ScreenQuad.hpp"
+#include "ShaderSettings.hpp"
 
 class DeepGBuffer //2 layer deep g-buffer
 {
@@ -26,6 +27,7 @@ private:
 
 public:
 	void Initialize();
+	void LoadShader(const ShaderSettings &settings);
 	void Update(const Scene &scene, const Camera &camera);
 	const mygl3::Texture2DArray &GetNormal() const { return m_normal; }
 	const mygl3::Texture2DArray &GetAlbedo() const { return m_albedo; }

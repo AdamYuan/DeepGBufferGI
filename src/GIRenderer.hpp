@@ -29,6 +29,7 @@ private:
 	GLint m_radiosity_unif_time, m_radiosity_unif_resolution;
 public:
 	void Initialize();
+	void LoadRadiosityShader(const ShaderSettings &settings);
 	void PrepareInputRadiance(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer,
 							  const ShadowMap &shadowmap, const GITemporalFilter &temporal);
 	void SampleRadiosity(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer);
@@ -46,6 +47,7 @@ private:
 	mygl3::FrameBuffer m_blur_fbo[2];
 public:
 	void Initialize(const GIRenderer &renderer);
+	void LoadShader(const ShaderSettings &settings);
 	void Blur(const ScreenQuad &quad, const DeepGBuffer &gbuffer);
 };
 
@@ -60,6 +62,7 @@ private:
 	mygl3::FrameBuffer m_reproject_fbo, m_blend_fbo;
 public:
 	void Initialize(const GIRenderer &renderer);
+	void LoadBlendShader(const ShaderSettings &settings);
 	void Reproject(const ScreenQuad &quad, const Camera &camera, const DeepGBuffer &gbuffer);
 	//reproject last frame's radiosity result to m_reprojected_texture
 	void Blend(const ScreenQuad &quad);
