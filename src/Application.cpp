@@ -253,12 +253,36 @@ bool Application::ui_radiosity_temporal_blend_settings()
 
 void Application::ui_load_scene()
 {
-	constexpr size_t kFilenameBufSize = 512;
-	static char obj_name_buf[kFilenameBufSize];
-	ui_file_open("OBJ Filename", "...##0", obj_name_buf, kFilenameBufSize, "OBJ Filename",
-				 {"Wavefront OBJ File (.obj)", "*.obj", "All Files", "*"});
+	bool open_popup = false;
+
 	if(ImGui::Button("Load Scene"))
-		load_scene(obj_name_buf);
+		open_popup = true;
+
+	if(open_popup)
+		ImGui::OpenPopup("Load Scene##1");
+
+	if (ImGui::BeginPopupModal("Load Scene##1", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		constexpr size_t kFilenameBufSize = 512;
+		static char name_buf[kFilenameBufSize];
+
+		ui_file_open("OBJ Filename", "...##5", name_buf, kFilenameBufSize, "OBJ Filename",
+					   {"OBJ File (.obj)", "*.obj", "All Files", "*"});
+
+		{
+			if (ImGui::Button("Load", ImVec2(256, 0)))
+			{
+				load_scene(name_buf);
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SetItemDefaultFocus();
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(256, 0)))
+				ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
 }
 
 void Application::ui_info_and_guide()

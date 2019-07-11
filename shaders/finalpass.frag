@@ -19,9 +19,9 @@ void main()
 
 	vec3 final = input_radiance + output_radiance * albedo;
 
-    const float kGamma = 2.2, kExposure = 1.5f;
-    vec3 mapped = vec3(1.0) - exp(-final * kExposure);
-    mapped = pow(mapped, vec3(1.0 / kGamma));
+	const float kGamma = 2.2, kExposure = 1.0f;
+	vec3 mapped = vec3(1.0) - exp(-final * kExposure);
+	mapped = pow(mapped, vec3(1.0 / kGamma));
 	oColor = vec4(mapped, 1.0f);
 }
 #endif
@@ -63,12 +63,12 @@ void main()
 #endif
 
 /*#version 450 core
-layout (binding = 2) uniform sampler2D uTexture;
-layout (binding = 3, rgba8) uniform image2D uImage;
-in vec2 vTexcoords;
-out vec4 oColor;
-void main()
-{
-	oColor = vec4(imageLoad(uImage, ivec2(gl_FragCoord.xy)).xyz + vec3(0.005f), 1.0f);
-	imageStore(uImage, ivec2(gl_FragCoord.xy), oColor);
-}*/
+  layout (binding = 2) uniform sampler2D uTexture;
+  layout (binding = 3, rgba8) uniform image2D uImage;
+  in vec2 vTexcoords;
+  out vec4 oColor;
+  void main()
+  {
+  oColor = vec4(imageLoad(uImage, ivec2(gl_FragCoord.xy)).xyz + vec3(0.005f), 1.0f);
+  imageStore(uImage, ivec2(gl_FragCoord.xy), oColor);
+  }*/

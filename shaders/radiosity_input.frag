@@ -23,9 +23,9 @@ uniform vec3 uLightDir;
 
 in vec2 gTexcoords;
 
-vec3 ReconstructPosition(in const vec2 texcoords)
+vec3 ReconstructPosition(in const vec2 texcoords, in const float depth)
 {
-	vec4 clip = vec4(texcoords * 2.0f - 1.0f, texture(uDepth, vec3(texcoords, gl_Layer)).r * 2.0f - 1.0f, 1.0f);
+	vec4 clip = vec4(texcoords * 2.0f - 1.0f, depth * 2.0f - 1.0f, 1.0f);
 	vec4 rec = uInvPV * clip;
 	return rec.xyz / rec.w;
 }
@@ -117,7 +117,13 @@ vec3 oct_to_float32x3(vec2 e)
 void main()
 {
 	ivec3 frag_coord = ivec3(ivec2(gl_FragCoord.xy), gl_Layer);
-	vec3 position = ReconstructPosition( gTexcoords );
+	float depth = texelFetch(uDepth, frag_coord, 0).r;
+	if(depth == 1.0f)
+	{
+		oRadiance = vec3(5, 4, 4);
+		return;
+	}
+	vec3 position = ReconstructPosition( gTexcoords, depth );
 	vec3 albedo = texelFetch(uAlbedo, frag_coord, 0).rgb;
 	vec3 normal = oct_to_float32x3( texelFetch(uNormal, frag_coord, 0).rg );
 

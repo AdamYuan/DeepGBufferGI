@@ -62,7 +62,7 @@ static int load_texture(std::vector<mygl3::Texture2D> *textures,
 		textures->pop_back();
 		return -1;
 	}
-	cur.Storage(width, height, GL_RGBA8, mygl3::Texture2D::GetLevelCount(width, height));
+	cur.Storage(width, height, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, mygl3::Texture2D::GetLevelCount(width, height));
 	cur.Data(data, width, height, GL_RGBA, GL_UNSIGNED_BYTE);
 	stbi_image_free(data);
 

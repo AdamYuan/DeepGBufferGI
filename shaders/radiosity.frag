@@ -50,10 +50,10 @@ vec3 oct_to_float32x3(vec2 e)
 	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * SignNotZero(v.xy);
 	return normalize(v);
 }
-void GetPositionNormal(in const ivec3 coord, in const int mip, out vec3 position, out vec3 normal)
+void GetPositionNormalDepth(in const ivec3 coord, in const int mip, out vec3 position, out vec3 normal, inout float depth)
 {
 	ivec3 coord_mip = ivec3(coord.xy >> mip, coord.z);
-	float depth = texelFetch(uDepth, coord_mip, mip).r;
+	depth = texelFetch(uDepth, coord_mip, mip).r;
 	position = ReconstructPosition(vec2(coord.xy) / vec2(uResolution), depth);
 	normal = oct_to_float32x3( texelFetch(uNormal, coord_mip, mip).rg );
 }
@@ -130,21 +130,22 @@ void main()
 		vec3 y_position,        y_normal;
 		vec3 y_position_peeled, y_normal_peeled;
 
-		GetPositionNormal(y_coord,        mip, y_position,        y_normal       );
-		GetPositionNormal(y_coord_peeled, mip, y_position_peeled, y_normal_peeled);
+		float y_depth, y_depth_peeled;
 
 		int  y_weight,  y_weight_peeled;
 		vec3 y_omega,   y_omega_peeled;
+
+		GetPositionNormalDepth(y_coord,        mip, y_position,        y_normal       , y_depth);
+		GetPositionNormalDepth(y_coord_peeled, mip, y_position_peeled, y_normal_peeled, y_depth_peeled);
 
 		GetSampleWeight(x_position, x_normal, y_position,        y_normal,        y_weight,        y_omega);
 		GetSampleWeight(x_position, x_normal, y_position_peeled, y_normal_peeled, y_weight_peeled, y_omega_peeled);
 
 		vec3 y_radiance = vec3(0), y_radiance_peeled = vec3(0);
-
 		if(y_weight        == 1) CalculateRadiance(dot(x_normal, y_omega)       , y_coord,        mip, y_radiance);
 		if(y_weight_peeled == 1) CalculateRadiance(dot(x_normal, y_omega_peeled), y_coord_peeled, mip, y_radiance_peeled);
 
-		float y_adj_weight = dot(y_radiance, y_radiance) + float(y_weight);
+		float y_adj_weight        = dot(y_radiance,        y_radiance) + float(y_weight);
 		float y_adj_weight_peeled = dot(y_radiance_peeled, y_radiance_peeled) + float(y_weight_peeled);
 
 		sample_used += y_adj_weight > y_adj_weight_peeled ? y_weight : y_weight_peeled;
