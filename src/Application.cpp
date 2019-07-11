@@ -37,7 +37,6 @@ Application::Application()
 	m_gi_blurer.Initialize(m_renderer);
 	m_gi_temporal.Initialize(m_renderer);
 	load_recompilable_shaders();
-
 	m_final_pass_shader.Initialize();
 	m_final_pass_shader.LoadFromFile("shaders/quad.vert", GL_VERTEX_SHADER);
 	m_final_pass_shader.LoadFromFile("shaders/finalpass.frag", GL_FRAGMENT_SHADER);
@@ -149,7 +148,7 @@ void Application::sun_key_control()
 	}
 }
 
-void Application::load_scene(const char *filename)
+void Application::LoadScene(const char *filename)
 {
 	m_scene.reset(new Scene);
 	if(!m_scene->Initialize(filename)) m_scene.reset();
@@ -272,7 +271,7 @@ void Application::ui_load_scene()
 		{
 			if (ImGui::Button("Load", ImVec2(256, 0)))
 			{
-				load_scene(name_buf);
+				LoadScene(name_buf);
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SetItemDefaultFocus();

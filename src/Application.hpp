@@ -40,7 +40,6 @@ private:
 
 	static void glfw_key_callback(GLFWwindow *window, int key, int, int action, int);
 
-	void load_scene(const char *filename);
 	void load_recompilable_shaders();
 
 	bool m_show_ui = true;
@@ -56,6 +55,7 @@ private:
 public:
 	Application();
 	~Application();
+	void LoadScene(const char *filename);
 	void Run();
 };
 
