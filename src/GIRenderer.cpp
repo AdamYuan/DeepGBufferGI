@@ -102,7 +102,6 @@ void GIBlurer::Initialize(const GIRenderer &renderer)
 
 	m_target = &renderer.GetOutputRadiance();
 
-
 	m_blur_fbo[0].Initialize();
 	m_blur_fbo[0].AttachTexture(m_tmp_texture, GL_COLOR_ATTACHMENT0);
 	m_blur_fbo[1].Initialize();

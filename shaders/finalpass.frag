@@ -1,6 +1,6 @@
 #version 450 core
-//#define TEST_SCENE
 #define TEST_RADIOSITY
+//#define TEST_SCENE
 //#define TEST_SHADOW
 
 #ifdef TEST_RADIOSITY
@@ -28,14 +28,16 @@ void main()
 
 #ifdef TEST_SCENE
 out vec4 oColor;
-layout (binding = 2) uniform sampler2DArray uTexture;
+layout (binding = 3) uniform sampler2DArray uAlbedo;
+layout (binding = 6) uniform sampler2DArray uInputRadiance;
+layout (binding = 7) uniform sampler2D uOutputRadiance;
 in vec2 vTexcoords;
 
 void main()
 {
 	vec3 coord = vec3(vTexcoords, gl_FragCoord.x < 640 ? 0 : 1);
 	oColor = vec4(
-		pow(texture(uTexture, coord).rgb, vec3(1.0f / 2.2f))
+		pow(texture(uOutputRadiance, vTexcoords).rgb, vec3(1.0f / 2.2f))
 		, 1);
 }
 #endif
